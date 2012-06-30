@@ -276,12 +276,13 @@ as cdr."
           ;;------------
           (unless (= (point) (point-min))
             (end-of-line))
-          (message "%d:%d" p q)
+          (message "%d initial:%d hidable:%S" p q hidable)
           ;;------------
           ;; modify for beginning of buffer
           ;;------------
           (when (and (>= (point) q)
-                     (not (eq (point-min) q)))
+                     (or hidable;; (= p q)
+                         (not (eq (point-min) q))))
             (list (and hidable p) (point))))))))
 
 ;; copy from org-special-ctrl-a/e
