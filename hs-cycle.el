@@ -59,6 +59,31 @@
 (require 'hideshow-org)
 (require 'newcomment)
 
+
+;;(it (:vars ((cmd "(")))
+;;hs-already-hidden-p
+;;hs-find-block-beginning raise error when after "("
+
+(defun hs-cycle:hs-find-block-beginning ()
+  "Reposition point at block-start.
+Return point, or nil if original point was not in a block."
+  (condition-case err
+      (progn
+        ;; for block-beginning
+        (forward-char)
+        (backward-up-list)
+        ;; (forward-char)
+        (point))
+    (scan-error
+     nil
+     ;;when top level
+     )))
+"("
+;;this is for hs-already-hidden-p
+(defun hs-find-block-beginning ()
+  (hs-cycle:hs-find-block-beginning)
+  )
+
 ;;copy from hs-discard-overlays
 (defun hs-cycle:count-overlay-block()
   "Delete hideshow overlays in region defined by FROM and TO.
