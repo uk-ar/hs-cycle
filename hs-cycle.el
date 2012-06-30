@@ -1,31 +1,61 @@
+;;; hs-cycle.el --- folding behave like org-mode.
+
+;;-------------------------------------------------------------------
+;;
+;; Copyright (C) 2012 Yuuki Arisawa
+;;
+;; This file is NOT part of Emacs.
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2 of
+;; the License, or (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be
+;; useful, but WITHOUT ANY WARRANTY; without even the implied
+;; warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+;; PURPOSE.  See the GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public
+;; License along with this program; if not, write to the Free
+;; Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+;; MA 02111-1307 USA
+;;
+;;-------------------------------------------------------------------
+
 (load-library "hideshow")
 
-(add-to-list 'hs-special-modes-alist
-             '(ruby-mode
-               "class\\|module\\|def\\|if\\|unless\\|case\\|while\\|until\\|for\\|begin\\|do" "end" "#"
-               ;;"\\(def\\|do\\|{\\)" "\\(end\\|end\\|}\\)" "#"
-               (lambda (arg) (ruby-end-of-block))
-               ;;ruby-move-to-block
-               nil))
-
-(dolist (hook (list 'emacs-lisp-mode-hook
-                    'c-mode-common-hook
-                    ;;'c++-mode-hook
-                    'python-mode-hook
-                    ;;'espresso-mode-hook
-                    'javascript-mode-hook
-                    'ruby-mode-hook
-                    ))
-  (add-hook hook
-            '(lambda()
-               (hs-minor-mode)
-               (hs-org/minor-mode)
-               ;;(textmate-mode)
-               ;; (if (not(eq window-system nil))
-               ;; (hideshowvis-enable))
-               )
-            ))
-;; (auto-install-from-url "https://raw.github.com/secelis/hideshow-org/master/hideshow-org.el")
+(add-to-list
+ 'hs-special-modes-alist
+ '(ruby-mode
+   "class\\|module\\|def\\|if\\|unless\\|case\\|while\\|until\\|for\\|begin\\|do" "end" "#"
+   ;;"\\(def\\|do\\|{\\)" "\\(end\\|end\\|}\\)" "#"
+   (lambda (arg) (ruby-end-of-block))
+   ;;ruby-move-to-block
+   nil))
+;;hs-forward-sexp raise error in "string"
+;;hs-aready-hidden-p raise error when before "("
+(dolist
+    (hook
+     (list 'emacs-lisp-mode-hook
+           'c-mode-common-hook
+           ;;'c++-mode-hook
+           'python-mode-hook
+           ;;'espresso-mode-hook
+           'javascript-mode-hook
+           'ruby-mode-hook
+           ))
+  (add-hook
+   hook
+   '(lambda()
+      (hs-minor-mode)
+      (hs-org/minor-mode)
+      ;;(textmate-mode)
+      ;; (if (not(eq window-system nil))
+      ;; (hideshowvis-enable))
+      )
+   ))
+;; (auto-install-from-url ")https://raw.github.com/secelis/hideshow-org/master/hideshow-org.el")
 (require 'hideshow-org)
 (require 'newcomment)
 
