@@ -30,7 +30,7 @@
 (require 'newcomment)
 
 ;;copy from hs-discard-overlays
-(defun my-hs-count-overlay-block()
+(defun hs-cycle:count-overlay-block()
   "Delete hideshow overlays in region defined by FROM and TO.
     Skip \"internal\" overlays if `hs-allow-nesting' is non-ni."
   ;;copy from hs-hide-block
@@ -136,10 +136,15 @@
 
 ;; copy from hs-inside-comment-p
 ;; return nil when not in comment
-(defun my-hs-inside-comment-p ()
-  (let ((c-reg (hs-inside-comment-p)))
-    (if (null (car c-reg)) nil c-reg)
-    ))
+(defun hs-cycle:inside-comment-p ()
+  (let ((from (save-excursion
+                ;; (backward-blankline)
+                ))
+        (to (save-excursion
+              (forward-sentence))))
+    (save-excursion
+      (narrow-to-region from to)
+      (hs-inside-comment-p))))
 
 ;; (1 2) ";_"
 ;; (nil 2) ";\n_"
@@ -158,7 +163,7 @@ as cdr."
     ;; forward comment, and see if we are inside, then extend extend
     ;; forward and backward as long as we have comments
     (let ((q (point))
-          (my-hs-special-ctrl-a/e nil))
+          (hs-cycle:special-ctrl-a/e nil))
       (when (or (looking-at hs-c-start-regexp)
                 ;; (re-search-backward hs-c-start-regexp (point-min) t))
                 ;;------------
@@ -225,10 +230,11 @@ as cdr."
             (list (and hidable p) (point))))))))
 
 ;; copy from org-special-ctrl-a/e
-(defcustom my-hs-special-ctrl-a/e t
-  )
+(defcustom hs-cycle:special-ctrl-a/e t
+  ""
+  :group 'hs-cycle)
 
-(setq my-hs-special-ctrl-a/e t)
+(setq hs-cycle:special-ctrl-a/e t)
 
 ;; aaaa
 (defadvice hs-toggle-hiding (around hs-cycle-or-none activate)
@@ -238,14 +244,18 @@ as cdr."
   )
 
 ;; minor-mode is better?
-(defadvice end-of-line (around my-hs-end-of-line activate)
+(defadvice end-of-line (around hs-cycle:end-of-line activate)
   "Return
 "
   (interactive)
-  (if (and my-hs-special-ctrl-a/e (eq 0 (my-hs-count-overlay-block)))
+  (if (and hs-cycle:special-ctrl-a/e
+           (eq 0 (hs-cycle:count-overlay))
+           (not (interactive-p)))
       ad-do-it
-    (end-of-visible-line))
-  )
+    (end-of-visible-line)))
+
+(ad-disable-advice 'end-of-line 'around 'hs-cycle:end-of-line)
+(ad-activate 'end-of-line)
 
 (defun visible-buffer-string ()
   "Same as `buffer-string', but excludes invisible text."
@@ -477,7 +487,7 @@ as cdr."
           (insert hs-cycle-test-string2)
           (goto-char 2)
           (font-lock-fontify-buffer)
-          (hs-find-block-beginning)
+          (hs-cycle:hs-find-block-beginning)
           ))
       (expect 1
         (with-temp-buffer
@@ -485,7 +495,7 @@ as cdr."
           (insert hs-cycle-test-string2)
           (goto-char 1)
           (font-lock-fontify-buffer)
-          (hs-find-block-beginning)
+          (hs-cycle:hs-find-block-beginning)
           ))
       (expect 1
         (with-temp-buffer
@@ -493,7 +503,7 @@ as cdr."
           (insert hs-cycle-test-string2)
           (goto-char 15);; end of line
           (font-lock-fontify-buffer)
-          (hs-find-block-beginning)
+          (hs-cycle:hs-find-block-beginning)
           ))
       (expect nil
         (with-temp-buffer
@@ -651,7 +661,7 @@ as cdr."
           (font-lock-fontify-buffer)
           (hs-hide-block)
           (goto-char 1);; hide block moves point
-          (my-hs-count-overlay-block)
+          (hs-cycle:count-overlay-block)
           ))
       )))
 
