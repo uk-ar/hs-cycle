@@ -59,6 +59,39 @@
 (require 'hideshow-org)
 (require 'newcomment)
 
+(defun hs-cycle:point-at-visual-eol ()
+  "Return
+ARGS"
+  (save-excursion
+    (end-of-visual-line)
+    (point)))
+
+(defun hs-cycle:point-at-visual-bol ()
+  "Return
+ARGS"
+  (save-excursion
+    (beginning-of-visual-line)
+    (point)))
+
+(defun hs-cycle:count-overlay (&optional from to)
+  (let ((total 0)
+        (from (or from (hs-cycle:point-at-visual-bol)))
+        (to (or to (hs-cycle:point-at-visual-eol))))
+    (when (< to from)
+      (setq from (prog1 to (setq to from))));; swap
+    (if hs-allow-nesting
+        (let (ov)
+          (while (> to (setq from (next-overlay-change from)))
+            (when (setq ov (hs-overlay-at from))
+              (setq from (overlay-end ov))
+              ;; (delete-overlay ov))))
+              (setq total (1+ total)))))
+      (dolist (ov (overlays-in from to))
+        (when (overlay-get ov 'hs)
+          ;;(delete-overlay ov)))))
+          (setq total (1+ total))
+          )))
+    total))
 
 ;;(it (:vars ((cmd "(")))
 ;;hs-already-hidden-p
