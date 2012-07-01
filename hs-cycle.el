@@ -386,8 +386,8 @@ as cdr."
   "(cons
  ;;
 
- ;;hoge
- ;;
+ ;;hoge.
+ ;;.
  ;;
 
  ;;
@@ -415,10 +415,67 @@ as cdr."
         b))"
   "if string for test")
 
+(defvar hs-cycle-test-string5
+  "void func(void){
+a}"
+  "c func string for test")
+
+(defvar hs-cycle-test-string6
+  "(;;()
+)"
+  " func string for test")
+
+;; (it (:vars ((cmd "(")))
+;;   (should (string= (buffer-string) "()"))
+;;   (should (eq (point) 2))
+;;   )
+
 (dont-compile
   (when(fboundp 'expectations)
     (expectations
-      (desc "hs-cycle")
+      (expect 1
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert hs-cycle-test-string6)
+          (goto-char 2)
+          (font-lock-fontify-buffer)
+          (hs-cycle:hs-find-block-beginning)
+          ))
+      (expect 1
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert hs-cycle-test-string6)
+          (goto-char 5)
+          (font-lock-fontify-buffer)
+          (hs-cycle:hs-find-block-beginning)
+          ))
+      ;; (expect "void func(void){}"
+      ;;   (with-temp-buffer
+      ;;     (c-mode)
+      ;;     (insert hs-cycle-test-string5)
+      ;;     (goto-char 17)
+      ;;     (font-lock-fontify-buffer)
+      ;;     (hs-cycle)
+      ;;     (visible-buffer-substring-no-properties (point-min) (point-max))
+      ;;     ))
+      ;; (expect "void func(void){}"
+      ;;   (with-temp-buffer
+      ;;     (c-mode)
+      ;;     (insert hs-cycle-test-string5)
+      ;;     (goto-char 1)
+      ;;     (font-lock-fontify-buffer)
+      ;;     (hs-cycle)
+      ;;     (visible-buffer-substring-no-properties (point-min) (point-max))
+      ;;     ))
+      (desc "hs-inside-comment-p")
+      (expect '(1 2);; ok
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert ";")
+          (goto-char 1)
+          (font-lock-fontify-buffer)
+          (hs-inside-comment-p)
+          ))
       (expect '(1 2);; ok
         (with-temp-buffer
           (emacs-lisp-mode)
@@ -634,7 +691,16 @@ as cdr."
           (font-lock-fontify-buffer)
           (hs-inside-comment-p)
           ))
-      (expect '(8 32)
+      (expect 0
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert hs-cycle-test-string)
+          (delete-backward-char 1)
+          (goto-char 1)
+          (font-lock-fontify-buffer)
+          (hs-cycle:count-overlay-block))
+        )
+      (expect '(8 34)
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert hs-cycle-test-string)
@@ -642,15 +708,16 @@ as cdr."
           (font-lock-fontify-buffer)
           (hs-inside-comment-p)
           ))
-      (expect '(13 28);; '(13 . 28)
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert hs-cycle-test-string)
-          (goto-char 19)
-          (font-lock-fontify-buffer)
-          (my-hs-inside-comment-p)
-          ))
-      (expect '(8 32);; '(13 . 28)
+      (desc "gg")
+      ;; (expect '(13 27);; '(13 . 28)
+      ;;   (with-temp-buffer
+      ;;     (emacs-lisp-mode)
+      ;;     (insert hs-cycle-test-string)
+      ;;     (goto-char 19)
+      ;;     (font-lock-fontify-buffer)
+      ;;     ;; (hs-cycle:inside-comment-p)
+      ;;     ))
+      (expect '(8 34);; '(13 . 28)
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert hs-cycle-test-string)
@@ -717,6 +784,32 @@ as cdr."
       ;;     (hs-hide-block)
       ;;     (visible-buffer-substring-no-properties (point-min) (point-max))
       ;;     ))
+      (expect 0
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert ";)")
+          (goto-char 2)
+          (font-lock-fontify-buffer)
+          (hs-cycle:count-overlay-block)
+          ))
+      (expect ";;hoge"
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert ";;hoge\n;;")
+          (goto-char 1)
+          (font-lock-fontify-buffer)
+          (hs-cycle)
+          (visible-buffer-substring-no-properties (point-min) (point-max))
+          ))
+      (expect ";;hoge"
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert ";;hoge\n;;")
+          (goto-char 2)
+          (font-lock-fontify-buffer)
+          (hs-cycle)
+          (visible-buffer-substring-no-properties (point-min) (point-max))
+          ))
       (expect "(if (a))"
         (with-temp-buffer
           (emacs-lisp-mode)
