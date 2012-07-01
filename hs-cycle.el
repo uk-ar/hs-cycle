@@ -119,7 +119,8 @@ Return point, or nil if original point was not in a block."
 
 ;;copy from hs-discard-overlays
 (defun hs-cycle:count-overlay-block()
-  "Delete hideshow overlays in region defined by FROM and TO.
+  "Count overlay from block beginnig to block end.
+Delete hideshow overlays in region defined by FROM and TO.
     Skip \"internal\" overlays if `hs-allow-nesting' is non-ni."
   ;;copy from hs-hide-block
   (save-excursion
@@ -209,7 +210,9 @@ Return point, or nil if original point was not in a block."
                       ;;same line?
                       )
                  (message "%s:%s"
-                          (line-number-at-pos(overlay-start(hs-already-hidden-p)))
+                          (line-number-at-pos
+                           (overlay-start
+                            (hs-already-hidden-p)))
                           pos)
                  (hs-show-block)
                  (save-restriction
@@ -228,6 +231,12 @@ Return point, or nil if original point was not in a block."
        )))
   )
 
+;; forward-sexp-function hs-forward-sexp-func
+;; Should change for Algol-ish modes
+;; (browse-url "http://d.hatena.ne.jp/kitokitoki/20091220/p1")
+(let ((parse-sexp-ignore-comments t))
+  (forward-sexp))
+
 ;; copy from hs-inside-comment-p
 ;; return nil when not in comment
 (defun hs-cycle:inside-comment-p ()
@@ -244,6 +253,7 @@ Return point, or nil if original point was not in a block."
 ;; (nil 2) ";\n_"
 ;; nil "_"
 ;; bug fix for ;; ;; comment
+;; need error handling when hs-c-start-regexp is nil
 (defun hs-inside-comment-p ()
   "Return non-nil if point is inside a comment, otherwise nil.
 Actually, return a list containing the buffer position of the start
