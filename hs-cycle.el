@@ -123,38 +123,33 @@ Return point, or nil if original point was not in a block."
     Skip \"internal\" overlays if `hs-allow-nesting' is non-ni."
   ;;copy from hs-hide-block
   (save-excursion
-    (let ((c-reg (hs-inside-comment-p))
+    (let ((c-reg (if hs-c-start-regexp (hs-inside-comment-p) nil))
           (from 0)
           (to 0)
-          (total 0))
+          (total 0)
+          (parse-sexp-ignore-comments t));; for hs-forward-sexp-func?
       (cond
-       ;; ((and c-reg (or (null (nth 0 c-reg))
-       ;;                 (<= (count-lines (car c-reg) (nth 1 c-reg)) 1)))
-       ;;  (message "(not enough comment lines to hide)"))
-       ((or c-reg
-            (looking-at hs-block-start-regexp);; ok? for 2 charactor
-            (hs-find-block-beginning))
+       ((and c-reg (or (null (nth 0 c-reg))
+                       (<= (count-lines (car c-reg) (nth 1 c-reg)) 1)))
+        (message "(not enough comment lines to hide)"))
+       (c-reg
+        (setq from (nth 0 c-reg))
+        (setq to (nth 1 c-reg)))
+       ((or (and hs-block-start-regexp
+                 (looking-at hs-block-start-regexp));; ok? for 2 charactor
+            (condition-case err
+                (hs-cycle:hs-find-block-beginning)
+              (error (beginning-of-visual-line))))
         ;; (hs-hide-block-at-point end c-reg)
         (setq from (point))
-        (funcall hs-forward-sexp-func 1)
+        (condition-case err
+            (funcall hs-forward-sexp-func 1)
+          (error (end-of-visual-line)))
         (setq to (point))
         ;;(overlay-put (make-overlay minp maxp 'face 'lazy-highlight))
         ))
-      (when (< to from)
-        (setq from (prog1 to (setq to from))));; swap
-      (if hs-allow-nesting
-          (let (ov)
-            (while (> to (setq from (next-overlay-change from)))
-              (when (setq ov (hs-overlay-at from))
-                (setq from (overlay-end ov))
-                ;; (delete-overlay ov))))
-                (setq total (1+ total)))))
-        (dolist (ov (overlays-in from to))
-          (when (overlay-get ov 'hs)
-            ;;(delete-overlay ov)))))
-            (setq total (1+ total))
-            )))
-      total)))
+      (hs-cycle:count-overlay from to)
+      )))
 
 ;;
 (defun hs-cycle ()
@@ -173,29 +168,40 @@ Return point, or nil if original point was not in a block."
                bounds-of-comment
                (= (line-number-at-pos)
                   (line-number-at-pos (car bounds-of-comment))))
+              ;; for block folding
               (and
                (save-excursion
                  ;; copy from hs-hide-level-recursive
-                 (when (hs-find-block-beginning)
+                 (when
+                     (condition-case err
+                         (hs-cycle:hs-find-block-beginning)
+                       (error (beginning-of-visual-line)))
                    (setq from (point))
-                   (funcall hs-forward-sexp-func 1)
+                   (condition-case err
+                       (funcall hs-forward-sexp-func 1)
+                     (error (end-of-visual-line)))
                    (setq to (point))
                    (and (= (line-number-at-pos pos)
                            (line-number-at-pos from))
                         (not (= (line-number-at-pos from)
                                 (line-number-at-pos to)))))))))
          (save-excursion
-           (message "hiden?:%s count:%s comment?:%s"
+           (message "hiden?:%s count:%s comment?:%s from:%S to:%S"
                     (hs-already-hidden-p)
-                    (my-hs-count-overlay-block)
-                    bounds-of-comment)
-           (let ((count (my-hs-count-overlay-block)))
+                    (hs-cycle:count-overlay-block)
+                    bounds-of-comment
+                    from
+                    to
+                    )
+           (let ((count (hs-cycle:count-overlay-block)))
              (progn
                (cond
                 ((and bounds-of-comment (not (hs-already-hidden-p)))
                  (hs-hide-block) (message "1:C:FOLDED"))
                 ((and bounds-of-comment (hs-already-hidden-p))
-                 (hs-show-block) (message "2:C:SUBTREE"))
+                 (hs-show-block) (message "2:C:CHILDREN"))
+                ((and bounds-of-comment)
+                 (hs-show-block) (message "3:C:SUBTREE"))
                 ((and (= count 0))
                  (hs-hide-block) (message "1:FOLDED"))
                 ((and (= count 1)
