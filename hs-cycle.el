@@ -461,10 +461,75 @@ a}"
 )"
   " func string for test")
 
-;; (it (:vars ((cmd "(")))
-;;   (should (string= (buffer-string) "()"))
-;;   (should (eq (point) 2))
-;;   )
+(defun hs-cycle:comment-or-string-p ()
+  (or (nth 3 (syntax-ppss))
+      (nth 4 (syntax-ppss))))
+
+;; (defun hs-cycle:re-search-forward (regexp &optional bound noerror count)
+;; cannot replace because regexp is block-beginning or comment-beginning
+;;   (let (ret)
+;;     (setq ret (re-search-forward regexp bound noerror count))
+;;     (while (and (hs-cycle:comment-or-string-p)
+;;                 ret)
+;;       (setq ret (re-search-forward regexp bound noerror count)))
+;;     ret
+;;     ))
+
+(defun hs-cycle:hs-hide-all ()
+  "Hide all top level blocks, displaying only first and last lines.
+Move point to the beginning of the line, and run the normal hook
+`hs-hide-hook'.  See documentation for `run-hooks'.
+If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
+  (interactive)
+  (hs-life-goes-on
+   (save-excursion
+     (unless hs-allow-nesting
+       (hs-discard-overlays (point-min) (point-max)))
+     (goto-char (point-min))
+     (let ((spew (make-progress-reporter "Hiding all blocks..."
+                                         (point-min) (point-max)))
+           (re (concat "\\("
+                       hs-block-start-regexp
+                       "\\)"
+                       (if hs-hide-comments-when-hiding-all
+                           (concat "\\|\\("
+                                   hs-c-start-regexp
+                                   "\\)")
+                         ""))))
+       (while (progn
+                (unless hs-hide-comments-when-hiding-all
+                  (forward-comment (point-max)))
+                (re-search-forward re (point-max) t))
+         ;;------------
+         ;; modify for "(" ;; (
+         ;;------------
+         (if (and (match-beginning 1)
+                  (not (or (nth 3 (syntax-ppss))
+                           (nth 4 (syntax-ppss)))))
+             ;; we have found a block beginning
+             (progn
+               (goto-char (match-beginning 1))
+               (if hs-hide-all-non-comment-function
+                   (funcall hs-hide-all-non-comment-function)
+                 (hs-hide-block-at-point t)))
+           ;; found a comment, probably
+           (let ((c-reg (hs-inside-comment-p)))
+             (when (and c-reg (car c-reg))
+               (if (> (count-lines (car c-reg) (nth 1 c-reg)) 1)
+                   (hs-hide-block-at-point t c-reg)
+                 (goto-char (nth 1 c-reg))))))
+         (progress-reporter-update spew (point)))
+       (progress-reporter-done spew)))
+   (beginning-of-line)
+   (run-hooks 'hs-hide-hook)))
+
+(defun hs-forward-sexp (match-data arg)
+  "Adjust point based on MATCH-DATA and call `hs-forward-sexp-func' w/ ARG.
+Original match data is restored upon return."
+  (save-match-data
+    (set-match-data match-data)
+    (goto-char (match-beginning hs-block-start-mdata-select))
+    (funcall hs-forward-sexp-func arg)))
 
 (dont-compile
   (when(fboundp 'expectations)
