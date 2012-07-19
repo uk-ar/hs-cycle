@@ -25,13 +25,45 @@
 
 (load-library "hideshow")
 
+;; todo advice & flet
+(defun ruby-move-to-block (n)
+  (let (start pos done down)
+    (setq start (ruby-calculate-indent))
+    (setq down (looking-at (if (< n 0) ruby-block-end-re
+                             (concat "\\<\\(" ruby-block-beg-re "\\)\\>"))))
+    (while (and (not done) (not (if (< n 0) (bobp) (eobp))))
+      (forward-line n)
+      (cond
+       ((looking-at "^\\s *$"))
+       ((looking-at "^\\s *#"))
+       ((and (> n 0) (looking-at "^=begin\\>"))
+        (re-search-forward "^=end\\>"))
+       ((and (< n 0) (looking-at "^=end\\>"))
+        (re-search-backward "^=begin\\>"))
+       (t
+        (setq pos (ruby-calculate-indent));; (current-indentation)
+        (cond
+         ((< start pos)
+          (setq down t))
+         ((and down (= pos start))
+          (setq done t))
+         ((> start pos)
+          (setq done t)))))
+      (if done
+          (save-excursion
+            (back-to-indentation)
+            (if (looking-at (concat "\\<\\(" ruby-block-mid-re "\\)\\>"))
+                (setq done nil))))))
+  (back-to-indentation))
+
 (add-to-list
  'hs-special-modes-alist
  '(ruby-mode
    "class\\|module\\|def\\|if\\|unless\\|case\\|while\\|until\\|for\\|begin\\|do" "end" "#"
    ;;"\\(def\\|do\\|{\\)" "\\(end\\|end\\|}\\)" "#"
-   (lambda (arg) (ruby-end-of-block))
-   ;;ruby-move-to-block
+   ;; (lambda (arg) (ruby-end-of-block));emacs wiki-> move-to-block
+   ruby-forward-sexp;; khiker ->end-of-block
+   ;;ruby-move-to-block;;bookshelf
    nil))
 ;;hs-forward-sexp raise error in "string"
 ;;hs-aready-hidden-p raise error when before "("
