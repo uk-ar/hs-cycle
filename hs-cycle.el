@@ -398,6 +398,10 @@ as cdr."
   "Same as `buffer-string', but excludes invisible text."
   (visible-buffer-substring (point-min) (point-max)))
 
+(defun visible-buffer-string-no-properties ()
+  "Same as `buffer-string', but excludes invisible text."
+  (substring-no-properties (visible-buffer-string)))
+
 (defun visible-buffer-substring-no-properties (start end)
   (visible-buffer-substring start end t)
   )
