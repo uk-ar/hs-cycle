@@ -531,6 +531,21 @@ Original match data is restored upon return."
     (goto-char (match-beginning hs-block-start-mdata-select))
     (funcall hs-forward-sexp-func arg)))
 
+(defun hs-cycle:hs-hide-block-at-point (&optional end comment-reg)
+    (if (and (null comment-reg)
+             (or (nth 3 (syntax-ppss))
+                 (nth 4 (syntax-ppss))))
+        nil
+      (hs-hide-block-at-point end comment-reg)))
+
+;; (defadvice hs-hide-block-at-point (around hs-cycle:hs-hide-block-at-point
+;;                                           activate)
+;;   (if (or (nth 3 (syntax-ppss))
+;;           (nth 4 (syntax-ppss)))
+;;       nil
+;;     ad-do-it
+;;   ))
+;; hs-find-block-beginning
 (dont-compile
   (when(fboundp 'expectations)
     (expectations
