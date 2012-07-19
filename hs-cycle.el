@@ -547,6 +547,160 @@ Original match data is restored upon return."
 ;;   ))
 ;; hs-find-block-beginning
 (dont-compile
+  (when (fboundp 'describe)
+    (
+     ;; aaa
+     describe ("" :vars (mode))
+      (around
+        (with-temp-buffer
+          (switch-to-buffer (current-buffer))
+          (funcall mode)
+          (funcall el-spec:example)))
+      (context ("in emacs-lisp-mode" :vars ((mode 'emacs-lisp-mode)
+                             (string-of-buffer
+                              "\
+;;a
+;;b
+
+\"(\"
+;(
+\(if
+    (a)
+    (b))
+
+ ;a
+ ;b
+
+"
+                              )))
+        (it ()
+          (insert string-of-buffer)
+          (should-error (hs-hide-all));; bug
+          )
+        (it ()
+          (insert string-of-buffer)
+          (hs-cycle:hs-hide-all)
+          (should (string= ";;a\n\n\"(\"\n;(\n(if)\n\n ;a\n\n"
+                           (visible-buffer-string-no-properties))))
+        (context "hs-hide-block-at-point"
+          (it ()
+            (insert "\"(\"")
+            ;; (goto-char 2)
+            (should-error (hs-find-block-beginning)) ;; bug
+            )
+          (it ()
+            (insert ";(")
+            ;; (goto-char 2)
+            (should-error (hs-find-block-beginning)) ;; bug
+            )
+          (it ()
+            (insert "\"(\"")
+            ;; (goto-char 2)
+            ;; (should (null (hs-cycle:hs-find-block-beginning))) ;; bug
+            )
+          (it ()
+            (insert ";(")
+            ;; (goto-char 2)
+            ;; (should (null (hs-cycle:hs-find-block-beginning))) ;; bug
+            )
+          )
+        )
+      (context ("in ruby mode" :vars ((mode 'ruby-mode)
+                             (string-of-buffer
+                              "\
+#a
+#b
+
+\'def\'
+#def
+def hoge1
+   p 'a'
+end
+def hoge2
+p 'b'
+end
+
+open('hoge.c') { |f|
+  p 'b'
+}
+
+ #a
+ #b
+"
+                              )))
+        (context ("hs-hide-block-at-point" :vars ((string-of-buffer "\
+def hoge
+  p 'a'
+end")))
+          (it ()
+            (insert string-of-buffer)
+            (goto-char 1)
+            (hs-hide-block-at-point t)
+            (should (string= "def hogeend"
+                             (visible-buffer-string)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (hs-hide-all)
+            (should (string= "def hogeend"
+                             (visible-buffer-string)))
+            )
+          (it ()
+            (insert " ")
+            (insert string-of-buffer)
+            (hs-hide-all)
+            (should (string= " def hogeend"
+                             (visible-buffer-string)))
+            )
+          (context ("no indent" :vars ((string-of-buffer "\
+def hoge
+p 'a'
+end")))
+            (it ()
+              ;; for ruby-end-of-block & ruby-move-to-block has bug
+              (insert string-of-buffer)
+              (goto-char 1)
+              (hs-hide-block-at-point t)
+              (should (string= "def hogeend"
+                               (visible-buffer-string)))
+              )
+            (it ()
+              (insert string-of-buffer)
+              (goto-char 1)
+              (hs-hide-block-at-point t)
+              ;; (should (string= "def hogeend"
+              ;;                  (visible-buffer-string)));;bug
+              )
+            (it ()
+              (insert string-of-buffer)
+              (hs-hide-all)
+              (should (string= "def hogeend"
+                               (visible-buffer-string)))
+              )
+            )
+          (it ()
+            (insert "\"{\"")
+            (goto-char 2)
+            ;; (should-error (hs-hide-block-at-point t))
+            )
+          (it ()
+            (insert ";{")
+            (goto-char 2)
+            ;; (should-error (hs-hide-block-at-point t))
+            )
+          (it ()
+            (insert "\"{\"")
+            (goto-char 2)
+            (should (eq nil (hs-cycle:hs-hide-block-at-point t)))
+            )
+          (it ()
+            (insert ";{")
+            (goto-char 2)
+            (should (eq nil (hs-cycle:hs-hide-block-at-point t)))
+            )
+        )))))
+
+(dont-compile
   (when(fboundp 'expectations)
     (expectations
       (expect 1
