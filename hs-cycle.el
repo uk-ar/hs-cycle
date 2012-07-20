@@ -24,6 +24,12 @@
 ;;-------------------------------------------------------------------
 
 (load-library "hideshow")
+(defmacro hs-cycle:save-original-func (symbol)
+  `(fset ',(intern (format "%s-org" symbol))
+         (symbol-function ',symbol))
+  )
+
+(hs-cycle:save-original-func ruby-move-to-block)
 
 ;; todo advice & flet
 (defun ruby-move-to-block (n)
@@ -129,7 +135,9 @@ ARGS"
 ;;hs-already-hidden-p
 ;;hs-find-block-beginning raise error when after "("
 
-(defun hs-cycle:hs-find-block-beginning ()
+(hs-cycle:save-original-func hs-find-block-beginning)
+
+(defun hs-find-block-beginning ()
   "Reposition point at block-start.
 Return point, or nil if original point was not in a block."
   (condition-case err
@@ -144,10 +152,6 @@ Return point, or nil if original point was not in a block."
      ;;when top level
      )))
 "("
-;;this is for hs-already-hidden-p
-(defun hs-find-block-beginning ()
-  (hs-cycle:hs-find-block-beginning)
-  )
 
 ;;copy from hs-discard-overlays
 (defun hs-cycle:count-overlay-block()
@@ -585,23 +589,20 @@ Original match data is restored upon return."
         (context "hs-hide-block-at-point"
           (it ()
             (insert "\"(\"")
-            ;; (goto-char 2)
-            (should-error (hs-find-block-beginning)) ;; bug
+            (should-error (hs-find-block-beginning-org)) ;; bug
             )
           (it ()
             (insert ";(")
-            ;; (goto-char 2)
-            (should-error (hs-find-block-beginning)) ;; bug
+            (should-error (hs-find-block-beginning-org)) ;; bug
             )
           (it ()
             (insert "\"(\"")
-            ;; (goto-char 2)
-            ;; (should (null (hs-cycle:hs-find-block-beginning))) ;; bug
+            (should (null (hs-find-block-beginning))) ;; ok
             )
           (it ()
             (insert ";(")
-            ;; (goto-char 2)
-            ;; (should (null (hs-cycle:hs-find-block-beginning))) ;; bug
+            (goto-char 2)
+            (should (null (hs-find-block-beginning))) ;; ok
             )
           )
         )
@@ -641,16 +642,15 @@ end")))
             )
           (it ()
             (insert string-of-buffer)
-            (hs-hide-all)
-            (should (string= "def hogeend"
-                             (visible-buffer-string)))
+            (goto-char 1)
+            (ruby-move-to-block-org 1)
+            (should-not (eq (point) 16))
             )
           (it ()
-            (insert " ")
             (insert string-of-buffer)
-            (hs-hide-all)
-            (should (string= " def hogeend"
-                             (visible-buffer-string)))
+            (goto-char 1)
+            (ruby-move-to-block 1)
+            (should (eq (point) 16))
             )
           (context ("no indent" :vars ((string-of-buffer "\
 def hoge
