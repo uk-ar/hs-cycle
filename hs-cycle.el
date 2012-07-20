@@ -23,7 +23,9 @@
 ;;
 ;;-------------------------------------------------------------------
 
-(load-library "hideshow")
+(require 'hideshow)
+(require 'ruby-mode)
+
 (defmacro hs-cycle:save-original-func (symbol)
   `(fset ',(intern (format "%s-org" symbol))
          (symbol-function ',symbol))
