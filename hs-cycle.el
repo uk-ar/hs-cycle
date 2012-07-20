@@ -552,14 +552,6 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
    (beginning-of-line)
    (run-hooks 'hs-hide-hook)))
 
-(defun hs-forward-sexp (match-data arg)
-  "Adjust point based on MATCH-DATA and call `hs-forward-sexp-func' w/ ARG.
-Original match data is restored upon return."
-  (save-match-data
-    (set-match-data match-data)
-    (goto-char (match-beginning hs-block-start-mdata-select))
-    (funcall hs-forward-sexp-func arg)))
-
 (defun hs-cycle:hs-hide-block-at-point (&optional end comment-reg)
     (if (and (null comment-reg)
              (or (nth 3 (syntax-ppss))
