@@ -567,11 +567,12 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
 ;;     ad-do-it
 ;;   ))
 ;; hs-find-block-beginning
+
 (dont-compile
   (when (fboundp 'describe)
     (
      ;; aaa
-     describe ("" :vars (mode))
+     describe ("hs-cycle" :vars (mode))
       (around
         (with-temp-buffer
           (switch-to-buffer (current-buffer))
@@ -646,10 +647,11 @@ open('hoge.c') { |f|
  #b
 "
                               )))
-        (context ("hs-hide-block-at-point" :vars ((string-of-buffer "\
+        (context ("no indent" :vars ((string-of-buffer "\
 def hoge
-  p 'a'
+p 'a'
 end")))
+          ;; for ruby-end-of-block & ruby-move-to-block has bug
           (it ()
             (insert string-of-buffer)
             (goto-char 1)
@@ -669,24 +671,30 @@ end")))
             (ruby-move-to-block 1)
             (should (eq (point) 16))
             )
-          (context ("no indent" :vars ((string-of-buffer "\
-def hoge
-p 'a'
-end")))
             (it ()
-              ;; for ruby-end-of-block & ruby-move-to-block has bug
               (insert string-of-buffer)
               (goto-char 1)
               (hs-hide-block-at-point t)
+            ;; (should (string= "def hogeend"
+            ;;                  (visible-buffer-string)));;bug
+            )
+          (it ()
+            (insert string-of-buffer)
+            (hs-hide-all)
               (should (string= "def hogeend"
                                (visible-buffer-string)))
               )
+          )
+        (context ("hs-hide-block-at-point" :vars ((string-of-buffer "\
+def hoge
+  p 'a'
+end")))
             (it ()
               (insert string-of-buffer)
               (goto-char 1)
               (hs-hide-block-at-point t)
-              ;; (should (string= "def hogeend"
-              ;;                  (visible-buffer-string)));;bug
+            (should (string= "def hogeend"
+                             (visible-buffer-string)))
               )
             (it ()
               (insert string-of-buffer)
@@ -694,6 +702,12 @@ end")))
               (should (string= "def hogeend"
                                (visible-buffer-string)))
               )
+          (it ()
+            (insert " ")
+            (insert string-of-buffer)
+            (hs-hide-all)
+            (should (string= " def hogeend"
+                             (visible-buffer-string)))
             )
           (it ()
             (insert "\"{\"")
@@ -715,7 +729,9 @@ end")))
             (goto-char 2)
             (should (eq nil (hs-cycle:hs-hide-block-at-point t)))
             )
-        )))))
+          ))
+      ))
+  )
 
 (dont-compile
   (when(fboundp 'expectations)
