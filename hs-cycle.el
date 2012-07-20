@@ -401,7 +401,7 @@ as cdr."
 (setq hs-cycle:special-ctrl-a/e t)
 
 ;; aaaa
-(defadvice hs-toggle-hiding (around hs-cycle-or-none activate)
+(defadvice hs-toggle-hiding (around hs-cycle:hs-toggle-hiding activate)
   (interactive)
   ;;   ad-do-it
   (hs-cycle)
