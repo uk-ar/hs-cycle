@@ -139,20 +139,42 @@ ARGS"
 
 (hs-cycle:save-original-func hs-find-block-beginning)
 
+;;this is for hs-already-hidden-p
 (defun hs-find-block-beginning ()
   "Reposition point at block-start.
-Return point, or nil if original point was not in a block."
-  (condition-case err
-      (progn
-        ;; for block-beginning
-        (forward-char)
-        (backward-up-list)
-        ;; (forward-char)
-        (point))
-    (scan-error
-     nil
-     ;;when top level
-     )))
+  Return point, or nil if original point was not in a block."
+    "Reposition point at block-start.
+  Return point, or nil if original point was not in a block."
+   (let ((done nil)
+         (here (point)))
+     ;; look if current line is block start
+     ;;------------
+     ;; modify for comment or string
+     ;;------------
+     (if (and (looking-at hs-block-start-regexp)
+              (not (hs-cycle:comment-or-string-p)))
+         (point)
+       ;; look backward for the start of a block that contains the cursor
+       (while (and (re-search-backward hs-block-start-regexp nil t)
+                   ;;------------
+                   ;; modify for comment or string
+                   ;;------------
+                   (not (hs-cycle:comment-or-string-p))
+                   (not (setq done
+                              (< here (save-excursion
+                                        (message "p:%s" (point))
+                                        (message "%s" (match-data t))
+                                        (message "%s" (point))
+                                        (hs-forward-sexp (match-data t) 1)
+                                        (message "p:%s" (point))
+                                        (message "%s" (match-data t))
+                                        (message "%s" (point))
+                                        (point)))))))
+       (if done
+           (point)
+         (goto-char here)
+         nil))))
+
 "("
 
 ;;copy from hs-discard-overlays
@@ -176,9 +198,8 @@ Delete hideshow overlays in region defined by FROM and TO.
         (setq to (nth 1 c-reg)))
        ((or (and hs-block-start-regexp
                  (looking-at hs-block-start-regexp));; ok? for 2 charactor
-            (condition-case err
-                (hs-cycle:hs-find-block-beginning)
-              (error (beginning-of-visual-line))))
+            (hs-find-block-beginning)
+            )
         ;; (hs-hide-block-at-point end c-reg)
         (setq from (point))
         (condition-case err
