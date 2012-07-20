@@ -489,8 +489,10 @@ a}"
   " func string for test")
 
 (defun hs-cycle:comment-or-string-p ()
-  (or (nth 3 (syntax-ppss))
-      (nth 4 (syntax-ppss))))
+  (let ((state (syntax-ppss)))
+    (or (nth 3 state)
+        (nth 4 state))
+    ))
 
 ;; (defun hs-cycle:re-search-forward (regexp &optional bound noerror count)
 ;; cannot replace because regexp is block-beginning or comment-beginning
