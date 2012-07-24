@@ -24,6 +24,8 @@
 ;;-------------------------------------------------------------------
 
 (require 'hideshow)
+(make-variable-buffer-local 'hs-block-end-regexp)
+
 (require 'ruby-mode)
 
 (defmacro hs-cycle:save-original-func (symbol)
