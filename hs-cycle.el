@@ -29,8 +29,11 @@
 (require 'ruby-mode)
 
 (defmacro hs-cycle:save-original-func (symbol)
-  `(fset ',(intern (format "%s-org" symbol))
-         (symbol-function ',symbol))
+  `(if (not (fboundp ',(intern (format "%s-org" symbol))))
+       (fset ',(intern (format "%s-org" symbol))
+             (symbol-function ',symbol))
+     (warn "2nd time")
+     )
   )
 
 (hs-cycle:save-original-func ruby-move-to-block)
