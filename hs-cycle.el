@@ -550,6 +550,62 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
    (beginning-of-line)
    (run-hooks 'hs-hide-hook)))
 
+(defun hs-cycle:next-block-beginning ()
+  (condition-case err
+      (save-excursion
+        (while (and (re-search-forward hs-block-start-regexp nil nil)
+                    (hs-cycle:comment-or-string-p)))
+        (match-beginning 0))
+    (search-failed
+     nil)))
+
+(hs-cycle:save-original-func hs-hide-block-at-point)
+
+;; fix for no indent
+(defun hs-hide-block-at-point (&optional end comment-reg)
+  "Hide block if on block beginning.
+Optional arg END means reposition at end.
+Optional arg COMMENT-REG is a list of the form (BEGIN END) and
+specifies the limits of the comment, or nil if the block is not
+a comment.
+
+The block beginning is adjusted by `hs-adjust-block-beginning'
+and then further adjusted to be at the end of the line."
+  (if comment-reg
+      (hs-hide-comment-region (car comment-reg) (cadr comment-reg) end)
+    (when (looking-at hs-block-start-regexp)
+      (let* ((mdata (match-data t))
+             (header-beg (match-beginning 0))
+             (header-end (match-end 0))
+             p q ov)
+        ;; `p' is the point at the end of the block beginning, which
+        ;; may need to be adjusted
+        (save-excursion
+          (if hs-adjust-block-beginning
+              (goto-char (funcall hs-adjust-block-beginning
+                                  header-end))
+            (goto-char header-end))
+          ;;------------
+          ;; modify for ((\n))
+          ;;------------
+          (setq p (min (line-end-position)
+                       (or (hs-cycle:next-block-beginning) (point-max)))))
+        ;; `q' is the point at the end of the block
+        (hs-forward-sexp mdata 1)
+        (setq q (if (looking-back hs-block-end-regexp)
+                    (match-beginning 0)
+                  (point)))
+        ;;------------
+        ;; modify for (\n)
+        ;;------------
+        (when (and (< p q) (> (count-lines p (min (1+ q) (point-max))) 1))
+          (cond ((and hs-allow-nesting (setq ov (hs-overlay-at p)))
+                 (delete-overlay ov))
+                ((not hs-allow-nesting)
+                 (hs-discard-overlays p q)))
+          (hs-make-overlay p q 'code (- header-end p)))
+        (goto-char (if end q (min p header-end)))))))
+
 (defun hs-cycle:hs-hide-block-at-point (&optional end comment-reg)
   (if (and (null comment-reg)
            (or (nth 3 (syntax-ppss))
