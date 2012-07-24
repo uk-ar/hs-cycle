@@ -214,73 +214,77 @@ Delete hideshow overlays in region defined by FROM and TO.
           (bounds-of-comment (if (car c-reg) c-reg nil))
           from
           to)
-     (if (and
-          (or (not transient-mark-mode)
-              (and transient-mark-mode (not mark-active)));;require
-          (or (and ;; for comment folding
-               ;; (message "%s:%s:%s" (hs-inside-comment-p) (line-number-at-pos)(line-number-at-pos(car (hs-inside-comment-p)))t)
-               bounds-of-comment
-               (= (line-number-at-pos)
-                  (line-number-at-pos (car bounds-of-comment))))
-              ;; for block folding
-              (and
-               (save-excursion
-                 ;; copy from hs-hide-level-recursive
-                 (when
-                     (condition-case err
-                         (hs-cycle:hs-find-block-beginning)
-                       (error (beginning-of-visual-line)))
-                   (setq from (point))
-                   (condition-case err
-                       (funcall hs-forward-sexp-func 1)
-                     (error (end-of-visual-line)))
-                   (setq to (point))
-                   (and (= (line-number-at-pos pos)
-                           (line-number-at-pos from))
-                        (not (= (line-number-at-pos from)
-                                (line-number-at-pos to)))))))))
-         (save-excursion
-           (message "hiden?:%s count:%s comment?:%s from:%S to:%S"
+     (when (and
+            (or (not transient-mark-mode)
+                (and transient-mark-mode (not mark-active)));;require
+            (or
+             ;; for comment folding
+             (and bounds-of-comment
+                  (= (line-number-at-pos pos)
+                     (line-number-at-pos (car bounds-of-comment))))
+             ;; for block folding
+             (and
+              (null bounds-of-comment)
+              (save-excursion
+                ;; copy from hs-hide-level-recursive
+                (when (hs-find-block-beginning)
+                  (setq from (point))
+                  ;; need error handling?
+                  (hs-forward-sexp (match-data t) 1)
+                  ;; (funcall hs-forward-sexp-func 1)
+                  (setq to (point))
+                  (and (= (line-number-at-pos pos)
+                          (line-number-at-pos from))
+                       (not (= (line-number-at-pos from)
+                               (line-number-at-pos to)))))))))
+       (save-excursion
+         (message "hiden?:%s count:%s comment?:%s from:%S to:%S"
+                  (hs-already-hidden-p)
+                  (hs-cycle:count-overlay-block)
+                  bounds-of-comment
+                  from
+                  to
+                  )
+         (let ((count (hs-cycle:count-overlay-block)))
+           (progn
+             (cond
+              ((and bounds-of-comment (not (hs-already-hidden-p)))
+               (hs-hide-block) (message "1:C:FOLDED"))
+              ((and bounds-of-comment (hs-already-hidden-p))
+               (hs-show-block) (message "2:C:CHILDREN"))
+              ((and bounds-of-comment)
+               (hs-show-block) (message "3:C:SUBTREE"))
+              ;; hs-overlay-at
+              ((and (= count 0))
+               (hs-hide-block) (message "1:FOLDED"))
+              ;; when top level folded
+              ((and (= count 1)
                     (hs-already-hidden-p)
-                    (hs-cycle:count-overlay-block)
-                    bounds-of-comment
-                    from
-                    to
+                    ;;same line?
                     )
-           (let ((count (hs-cycle:count-overlay-block)))
-             (progn
-               (cond
-                ((and bounds-of-comment (not (hs-already-hidden-p)))
-                 (hs-hide-block) (message "1:C:FOLDED"))
-                ((and bounds-of-comment (hs-already-hidden-p))
-                 (hs-show-block) (message "2:C:CHILDREN"))
-                ((and bounds-of-comment)
-                 (hs-show-block) (message "3:C:SUBTREE"))
-                ((and (= count 0))
-                 (hs-hide-block) (message "1:FOLDED"))
-                ((and (= count 1)
-                      (hs-already-hidden-p)
-                      ;;same line?
-                      )
-                 (message "%s:%s"
-                          (line-number-at-pos
-                           (overlay-start
-                            (hs-already-hidden-p)))
-                          pos)
-                 (hs-show-block)
-                 (save-restriction
-                   (narrow-to-region (1+ from) (1- to))
-                   ;;(hs-show-all)
-                   (hs-hide-all))
-                 ;;(hs-show-block)
-                 ;;(hs-hide-level 1)
-                 (message "2:CHILDREN"))
-                (t
-                 (save-restriction
-                   (narrow-to-region (1+ from) (1- to))
-                   (hs-show-all))
-                 (message "3:SUBTREE")))
-               )))
+               ;; (message "%s:%s"
+               ;;          (line-number-at-pos
+               ;;           (overlay-start
+               ;;            (hs-already-hidden-p)))
+               ;;          pos)
+               (hs-show-block)
+               (save-restriction
+                 ;; (edebug)
+                 ;; (message "from:%s:to:%s" from to)
+                 (narrow-to-region (1+ from) (1- to))
+                 ;;(hs-show-all)
+                 (hs-cycle:hs-hide-all))
+               ;;(hs-show-block)
+               ;;(hs-hide-level 1)
+               (message "2:CHILDREN"))
+              (t
+               (save-restriction
+                 ;; (edebug)
+                 (message "from:%s:to:%s" from to)
+                 (narrow-to-region (1+ from) (1- to))
+                 (hs-show-all))
+               (message "3:SUBTREE")))
+             )))
        )))
   )
 
@@ -547,11 +551,11 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
    (run-hooks 'hs-hide-hook)))
 
 (defun hs-cycle:hs-hide-block-at-point (&optional end comment-reg)
-    (if (and (null comment-reg)
-             (or (nth 3 (syntax-ppss))
-                 (nth 4 (syntax-ppss))))
-        nil
-      (hs-hide-block-at-point end comment-reg)))
+  (if (and (null comment-reg)
+           (or (nth 3 (syntax-ppss))
+               (nth 4 (syntax-ppss))))
+      nil
+    (hs-hide-block-at-point end comment-reg)))
 
 ;; (defadvice hs-hide-block-at-point (around hs-cycle:hs-hide-block-at-point
 ;;                                           activate)
@@ -573,8 +577,8 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
           (funcall mode)
           (funcall el-spec:example)))
       (context ("in emacs-lisp-mode" :vars ((mode 'emacs-lisp-mode)
-                             (string-of-buffer
-                              "\
+                                            (string-of-buffer
+                                             "\
 ;;a
 ;;b
 
@@ -588,7 +592,8 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
  ;b
 
 "
-                              )))
+                                             )))
+        ;; todo: add count-lines test-cases
         (it ()
           (insert string-of-buffer)
           (should-error (hs-hide-all));; bug
