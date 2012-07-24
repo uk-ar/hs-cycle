@@ -145,37 +145,29 @@ ARGS"
 (defun hs-find-block-beginning ()
   "Reposition point at block-start.
   Return point, or nil if original point was not in a block."
-    "Reposition point at block-start.
-  Return point, or nil if original point was not in a block."
-   (let ((done nil)
-         (here (point)))
-     ;; look if current line is block start
-     ;;------------
-     ;; modify for comment or string
-     ;;------------
-     (if (and (looking-at hs-block-start-regexp)
-              (not (hs-cycle:comment-or-string-p)))
-         (point)
-       ;; look backward for the start of a block that contains the cursor
-       (while (and (re-search-backward hs-block-start-regexp nil t)
-                   ;;------------
-                   ;; modify for comment or string
-                   ;;------------
-                   (not (hs-cycle:comment-or-string-p))
-                   (not (setq done
-                              (< here (save-excursion
-                                        (message "p:%s" (point))
-                                        (message "%s" (match-data t))
-                                        (message "%s" (point))
-                                        (hs-forward-sexp (match-data t) 1)
-                                        (message "p:%s" (point))
-                                        (message "%s" (match-data t))
-                                        (message "%s" (point))
-                                        (point)))))))
-       (if done
-           (point)
-         (goto-char here)
-         nil))))
+  (let ((done nil)
+        (here (point)))
+    ;; look if current line is block start
+    ;;------------
+    ;; modify for comment or string
+    ;;------------
+    (if (and (looking-at hs-block-start-regexp)
+             (not (hs-cycle:comment-or-string-p)))
+        (point)
+      ;; look backward for the start of a block that contains the cursor
+      (while (and (re-search-backward hs-block-start-regexp nil t)
+                  (not (setq done
+                             (< here (save-excursion
+                                       ;;------------
+                                       ;; modify for comment or string
+                                       ;;------------
+                                       (unless (hs-cycle:comment-or-string-p)
+                                         (hs-forward-sexp (match-data t) 1))
+                                       (point)))))))
+      (if done
+          (point)
+        (goto-char here)
+        nil))))
 
 "("
 
