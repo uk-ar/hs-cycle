@@ -197,7 +197,7 @@ Delete hideshow overlays in region defined by FROM and TO.
         ;; (hs-hide-block-at-point end c-reg)
         (setq from (point))
         (condition-case err
-            (funcall hs-forward-sexp-func 1)
+            (hs-forward-sexp (match-data t) 1)
           (error (end-of-visual-line)))
         (setq to (point))
         ;;(overlay-put (make-overlay minp maxp 'face 'lazy-highlight))
