@@ -659,29 +659,179 @@ and then further adjusted to be at the end of the line."
           (hs-cycle:hs-hide-all)
           (should (string= ";;a\n\n\"(\"\n;(\n(if)\n\n ;a\n\n"
                            (visible-buffer-string-no-properties))))
+        (context "hs-find-block-at-point"
+          (it ()
+            (insert "\"(\"")
+            (should-error (hs-find-block-beginning-org)) ;; bug
+            )
+          (it ()
+            (insert ";(")
+            (should-error (hs-find-block-beginning-org)) ;; bug
+            )
+          (it ()
+            (insert "(;(\n)")
+            (backward-char)
+            (should-not (eq 1 (hs-find-block-beginning-org)));; bug
+            )
+          (it ()
+            (insert "()")
+            (should (null (hs-find-block-beginning)))
+            )
+          (it ()
+            (insert "\"(\"")
+            (should (null (hs-find-block-beginning))) ;; fix
+            )
+          (it ()
+            (insert ";(")
+            (should (null (hs-find-block-beginning))) ;; fix
+            )
+          (it ()
+            (insert "(")
+            (should-error (hs-find-block-beginning))
+            )
+          (it ()
+            (insert "(")
+            (backward-char)
+            (should (eq 1 (hs-find-block-beginning)));; ok?
+            )
+          (it ()
+            (insert ";(\n()")
+            (backward-char)
+            (should (eq 4 (hs-find-block-beginning)))
+            )
+          (it ()
+            (insert "(;(\n)")
+            (backward-char)
+            (should (eq 1 (hs-find-block-beginning))) ;; fix
+            )
+          )
         (context "hs-hide-block-at-point"
           (it ()
-            (insert "\"(\"")
-            (should-error (hs-find-block-beginning-org)) ;; bug
+            (insert "(\n )")
+            (beginning-of-buffer)
+            (hs-hide-block-at-point)
+            (should (string= "()"
+                             (visible-buffer-string-no-properties)))
             )
           (it ()
-            (insert ";(")
-            (should-error (hs-find-block-beginning-org)) ;; bug
+            (insert "()")
+            (beginning-of-buffer)
+            (hs-hide-block-at-point)
+            (should (string= "()"
+                             (visible-buffer-string-no-properties)))
             )
           (it ()
-            (insert "\"(\"")
-            (should (null (hs-find-block-beginning))) ;; ok
-            )
+            (insert "(\n)")
+            (beginning-of-buffer)
+            (hs-hide-block-at-point-org)
+            (should (not (string= "()"
+                                  (visible-buffer-string-no-properties))))
+            );; bug
           (it ()
-            (insert ";(")
-            (goto-char 2)
-            (should (null (hs-find-block-beginning))) ;; ok
+            (insert "(\n)")
+            (beginning-of-buffer)
+            (hs-hide-block-at-point)
+            (should (string= "()"
+                             (visible-buffer-string-no-properties)))
+            )
+          )
+        (context "hs-cycle"
+          (context ("with no-indent" :vars ((string-of-buffer
+                                             "\
+\((
+)
+\(
+))")))
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (should (string= "()"
+                               (visible-buffer-string-no-properties)))
+              )
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= "(()\n())"
+                               (visible-buffer-string-no-properties)))
+              );; bug
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= "((\n)\n(\n))"
+                               (visible-buffer-string-no-properties)))
+              )
+            )
+          (context ("with indent" :vars ((string-of-buffer
+                                          "\
+\((
+  )
+ (
+  ))")))
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (should (string= "()"
+                               (visible-buffer-string-no-properties)))
+              );; (()) is better?
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= "(()\n ())"
+                               (visible-buffer-string-no-properties)))
+              )
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= "((\n  )\n (\n  ))"
+                               (visible-buffer-string-no-properties)))
+              )
+            )
+          (context ("1 element" :vars ((string-of-buffer
+                                        "\
+\((
+))")))
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (should (string= "()"
+                               (visible-buffer-string-no-properties)))
+              );; (()) is better?
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= "(())"
+                               (visible-buffer-string-no-properties)))
+              )
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= "()"
+                               (visible-buffer-string-no-properties)))
+              );; bug
             )
           )
         )
       (context ("in ruby mode" :vars ((mode 'ruby-mode)
-                             (string-of-buffer
-                              "\
+                                      (string-of-buffer
+                                       "\
 #a
 #b
 
@@ -701,7 +851,7 @@ open('hoge.c') { |f|
  #a
  #b
 "
-                              )))
+                                       )))
         (context ("no indent" :vars ((string-of-buffer "\
 def hoge
 p 'a'
@@ -726,37 +876,37 @@ end")))
             (ruby-move-to-block 1)
             (should (eq (point) 16))
             )
-            (it ()
-              (insert string-of-buffer)
-              (goto-char 1)
-              (hs-hide-block-at-point t)
+          (it ()
+            (insert string-of-buffer)
+            (goto-char 1)
+            (hs-hide-block-at-point t)
             ;; (should (string= "def hogeend"
             ;;                  (visible-buffer-string)));;bug
             )
           (it ()
             (insert string-of-buffer)
             (hs-hide-all)
-              (should (string= "def hogeend"
-                               (visible-buffer-string)))
-              )
+            (should (string= "def hogeend"
+                             (visible-buffer-string)))
+            )
           )
         (context ("hs-hide-block-at-point" :vars ((string-of-buffer "\
 def hoge
   p 'a'
 end")))
-            (it ()
-              (insert string-of-buffer)
-              (goto-char 1)
-              (hs-hide-block-at-point t)
+          (it ()
+            (insert string-of-buffer)
+            (goto-char 1)
+            (hs-hide-block-at-point t)
             (should (string= "def hogeend"
                              (visible-buffer-string)))
-              )
-            (it ()
-              (insert string-of-buffer)
-              (hs-hide-all)
-              (should (string= "def hogeend"
-                               (visible-buffer-string)))
-              )
+            )
+          (it ()
+            (insert string-of-buffer)
+            (hs-hide-all)
+            (should (string= "def hogeend"
+                             (visible-buffer-string)))
+            )
           (it ()
             (insert " ")
             (insert string-of-buffer)
@@ -767,12 +917,12 @@ end")))
           (it ()
             (insert "\"{\"")
             (goto-char 2)
-            ;; (should-error (hs-hide-block-at-point t))
+            ;; (should-error (hs-hide-block-at-point-org t))
             )
           (it ()
             (insert ";{")
             (goto-char 2)
-            ;; (should-error (hs-hide-block-at-point t))
+            ;; (should-error (hs-hide-block-at-point-org t))
             )
           (it ()
             (insert "\"{\"")
