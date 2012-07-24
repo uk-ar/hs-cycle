@@ -205,7 +205,6 @@ Delete hideshow overlays in region defined by FROM and TO.
       (hs-cycle:count-overlay from to)
       )))
 
-;;
 (defun hs-cycle ()
   (interactive)
   (hs-life-goes-on
@@ -620,7 +619,6 @@ and then further adjusted to be at the end of the line."
 ;;       nil
 ;;     ad-do-it
 ;;   ))
-;; hs-find-block-beginning
 
 (dont-compile
   (when (fboundp 'describe)
