@@ -72,14 +72,11 @@
 (add-to-list
  'hs-special-modes-alist
  '(ruby-mode
-   "class\\|module\\|def\\|if\\|unless\\|case\\|while\\|until\\|for\\|begin\\|do" "end" "#"
-   ;;"\\(def\\|do\\|{\\)" "\\(end\\|end\\|}\\)" "#"
-   ;; (lambda (arg) (ruby-end-of-block));emacs wiki-> move-to-block
-   ruby-forward-sexp;; khiker ->end-of-block
-   ;;ruby-move-to-block;;bookshelf
+   "class\\|module\\|def\\|if\\|unless\\|case\\|while\\|until\\|for\\|begin\\|do" "end"
+   "#"
+   ruby-forward-sexp
    nil))
-;;hs-forward-sexp raise error in "string"
-;;hs-aready-hidden-p raise error when before "("
+
 (dolist
     (hook
      (list 'emacs-lisp-mode-hook
@@ -141,6 +138,7 @@ ARGS"
 ;;(it (:vars ((cmd "(")))
 ;;hs-already-hidden-p
 ;;hs-find-block-beginning raise error when after "("
+;;hs-already-hidden-p raise error when before "("
 
 (hs-cycle:save-original-func hs-find-block-beginning)
 
@@ -273,12 +271,6 @@ Delete hideshow overlays in region defined by FROM and TO.
        )))
   )
 
-;; forward-sexp-function hs-forward-sexp-func
-;; Should change for Algol-ish modes
-;; (browse-url "http://d.hatena.ne.jp/kitokitoki/20091220/p1")
-(let ((parse-sexp-ignore-comments t))
-  (forward-sexp))
-
 ;; copy from hs-inside-comment-p
 ;; return nil when not in comment
 (defun hs-cycle:inside-comment-p ()
@@ -383,7 +375,7 @@ as cdr."
 
 (setq hs-cycle:special-ctrl-a/e t)
 
-;; aaaa
+;; for hs-org
 (defadvice hs-toggle-hiding (around hs-cycle:hs-toggle-hiding activate)
   (interactive)
   ;;   ad-do-it
@@ -428,66 +420,15 @@ as cdr."
         (setq start next-pos)))
     str))
 
-(defvar hs-cycle-test-string
-  "(cons
- ;;
-
- ;;hoge.
- ;;.
- ;;
-
- ;;
- )"
-  "string for test")
-
-(defvar hs-cycle-test-string2
-  "(defun hoge ()
-  \"docstring\"
-  )"
-  "defun string for test")
-
-(defvar hs-cycle-test-string3
-  "(if (a)
-    (if
-        a
-        b))"
-  "if string for test")
-
-(defvar hs-cycle-test-string4
-  "(if (if a
-        b)
-    (if
-        a
-        b))"
-  "if string for test")
-
-(defvar hs-cycle-test-string5
-  "void func(void){
-a}"
-  "c func string for test")
-
-(defvar hs-cycle-test-string6
-  "(;;()
-)"
-  " func string for test")
-
 (defun hs-cycle:comment-or-string-p ()
   (let ((state (syntax-ppss)))
     (or (nth 3 state)
         (nth 4 state))
     ))
 
-;; (defun hs-cycle:re-search-forward (regexp &optional bound noerror count)
-;; cannot replace because regexp is block-beginning or comment-beginning
-;;   (let (ret)
-;;     (setq ret (re-search-forward regexp bound noerror count))
-;;     (while (and (hs-cycle:comment-or-string-p)
-;;                 ret)
-;;       (setq ret (re-search-forward regexp bound noerror count)))
-;;     ret
-;;     ))
+(hs-cycle:save-original-func hs-hide-all)
 
-(defun hs-cycle:hs-hide-all ()
+(defun hs-hide-all ()
   "Hide all top level blocks, displaying only first and last lines.
 Move point to the beginning of the line, and run the normal hook
 `hs-hide-hook'.  See documentation for `run-hooks'.
@@ -587,20 +528,6 @@ and then further adjusted to be at the end of the line."
           (hs-make-overlay p q 'code (- header-end p)))
         (goto-char (if end q (min p header-end)))))))
 
-(defun hs-cycle:hs-hide-block-at-point (&optional end comment-reg)
-  (if (and (null comment-reg)
-           (or (nth 3 (syntax-ppss))
-               (nth 4 (syntax-ppss))))
-      nil
-    (hs-hide-block-at-point end comment-reg)))
-
-;; (defadvice hs-hide-block-at-point (around hs-cycle:hs-hide-block-at-point
-;;                                           activate)
-;;   (if (or (nth 3 (syntax-ppss))
-;;           (nth 4 (syntax-ppss)))
-;;       nil
-;;     ad-do-it
-;;   ))
 
 (dont-compile
   (when (fboundp 'describe)
@@ -1028,66 +955,43 @@ end")))
       ))
   )
 
+(defvar hs-cycle-test-string
+  "(cons
+ ;;
+
+ ;;hoge.
+ ;;.
+ ;;
+
+ ;;
+ )"
+  "string for test")
+
+(defvar hs-cycle-test-string2
+  "(defun hoge ()
+  \"docstring\"
+  )"
+  "defun string for test")
+
+(defvar hs-cycle-test-string3
+  "(if (a)
+    (if
+        a
+        b))"
+  "if string for test")
+
+(defvar hs-cycle-test-string4
+  "(if (if a
+        b)
+    (if
+        a
+        b))"
+  "if string for test")
+
 (dont-compile
   (when(fboundp 'expectations)
     (expectations
-      (expect 1
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert hs-cycle-test-string6)
-          (goto-char 2)
-          (font-lock-fontify-buffer)
-          (hs-cycle:hs-find-block-beginning)
-          ))
-      (expect 1
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert hs-cycle-test-string6)
-          (goto-char 5)
-          (font-lock-fontify-buffer)
-          (hs-cycle:hs-find-block-beginning)
-          ))
-      ;; (expect "void func(void){}"
-      ;;   (with-temp-buffer
-      ;;     (c-mode)
-      ;;     (insert hs-cycle-test-string5)
-      ;;     (goto-char 17)
-      ;;     (font-lock-fontify-buffer)
-      ;;     (hs-cycle)
-      ;;     (visible-buffer-substring-no-properties (point-min) (point-max))
-      ;;     ))
-      ;; (expect "void func(void){}"
-      ;;   (with-temp-buffer
-      ;;     (c-mode)
-      ;;     (insert hs-cycle-test-string5)
-      ;;     (goto-char 1)
-      ;;     (font-lock-fontify-buffer)
-      ;;     (hs-cycle)
-      ;;     (visible-buffer-substring-no-properties (point-min) (point-max))
-      ;;     ))
       (desc "hs-inside-comment-p")
-      (expect '(1 2);; ok
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert ";")
-          (goto-char 1)
-          (font-lock-fontify-buffer)
-          (hs-inside-comment-p)
-          ))
-      (expect '(1 2);; ok
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert ";")
-          (font-lock-fontify-buffer)
-          (hs-inside-comment-p)
-          ))
-      (expect nil;; ok
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert " ")
-          (font-lock-fontify-buffer)
-          (hs-inside-comment-p)
-          ))
       (expect nil;; ok
         (with-temp-buffer
           (emacs-lisp-mode)
