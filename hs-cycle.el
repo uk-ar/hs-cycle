@@ -230,11 +230,13 @@ Delete hideshow overlays in region defined by FROM and TO.
               (save-excursion
                 ;; copy from hs-hide-level-recursive
                 (when (hs-find-block-beginning)
-                  (setq from (point))
+                  (setq from (match-end 0))
                   ;; need error handling?
                   (hs-forward-sexp (match-data t) 1)
                   ;; (funcall hs-forward-sexp-func 1)
-                  (setq to (point))
+                  (setq to (if (looking-back hs-block-end-regexp)
+                               (match-beginning 0)
+                             (point)))
                   (and (= (line-number-at-pos pos)
                           (line-number-at-pos from))
                        (not (= (line-number-at-pos from)
@@ -262,6 +264,7 @@ Delete hideshow overlays in region defined by FROM and TO.
               ;; when top level folded
               ((and (= count 1)
                     (hs-already-hidden-p)
+                    (eq (overlay-end (hs-already-hidden-p)) to)
                     ;;same line?
                     )
                ;; (message "%s:%s"
@@ -269,21 +272,14 @@ Delete hideshow overlays in region defined by FROM and TO.
                ;;           (overlay-start
                ;;            (hs-already-hidden-p)))
                ;;          pos)
-               (hs-show-block)
-               (save-restriction
-                 ;; (edebug)
-                 ;; (message "from:%s:to:%s" from to)
-                 (narrow-to-region (1+ from) (1- to))
-                 ;;(hs-show-all)
-                 (hs-cycle:hs-hide-all))
-               ;;(hs-show-block)
-               ;;(hs-hide-level 1)
+               (hs-hide-level 1)
                (message "2:CHILDREN"))
               (t
+               ;; when children level folded
                (save-restriction
                  ;; (edebug)
                  (message "from:%s:to:%s" from to)
-                 (narrow-to-region (1+ from) (1- to))
+                 (narrow-to-region from to)
                  (hs-show-all))
                (message "3:SUBTREE")))
              )))
