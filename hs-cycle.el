@@ -242,13 +242,6 @@ Delete hideshow overlays in region defined by FROM and TO.
                        (not (= (line-number-at-pos from)
                                (line-number-at-pos to)))))))))
        (save-excursion
-         (message "hiden?:%s count:%s comment?:%s from:%S to:%S"
-                  (hs-already-hidden-p)
-                  (hs-cycle:count-overlay-block)
-                  bounds-of-comment
-                  from
-                  to
-                  )
          (let ((count (hs-cycle:count-overlay-block)))
            (progn
              (cond
@@ -258,8 +251,7 @@ Delete hideshow overlays in region defined by FROM and TO.
                (hs-show-block) (message "2:C:CHILDREN"))
               ((and bounds-of-comment)
                (hs-show-block) (message "3:C:SUBTREE"))
-              ;; hs-overlay-at
-              ((and (= count 0))
+              ((= count 0)
                (hs-hide-block) (message "1:FOLDED"))
               ;; when top level folded
               ((and (= count 1)
@@ -267,11 +259,6 @@ Delete hideshow overlays in region defined by FROM and TO.
                     (eq (overlay-end (hs-already-hidden-p)) to)
                     ;;same line?
                     )
-               ;; (message "%s:%s"
-               ;;          (line-number-at-pos
-               ;;           (overlay-start
-               ;;            (hs-already-hidden-p)))
-               ;;          pos)
                (hs-hide-level 1)
                (message "2:CHILDREN"))
               (t
@@ -583,11 +570,7 @@ and then further adjusted to be at the end of the line."
               (goto-char (funcall hs-adjust-block-beginning
                                   header-end))
             (goto-char header-end))
-          ;;------------
-          ;; modify for ((\n))
-          ;;------------
-          (setq p (min (line-end-position)
-                       (or (hs-cycle:next-block-beginning) (point-max)))))
+          (setq p (line-end-position)))
         ;; `q' is the point at the end of the block
         (hs-forward-sexp mdata 1)
         (setq q (if (looking-back hs-block-end-regexp)
