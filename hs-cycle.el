@@ -604,9 +604,7 @@ and then further adjusted to be at the end of the line."
 
 (dont-compile
   (when (fboundp 'describe)
-    (
-     ;; aaa
-     describe ("hs-cycle" :vars (mode))
+    (describe ("hs-cycle" :vars (mode))
       (around
         (with-temp-buffer
           (switch-to-buffer (current-buffer))
@@ -726,7 +724,7 @@ and then further adjusted to be at the end of the line."
               (insert string-of-buffer)
               (beginning-of-buffer)
               (hs-cycle)
-              (should (string= "()"
+              (should (string= "(()"
                                (visible-buffer-string-no-properties)))
               )
             (it ()
@@ -736,18 +734,19 @@ and then further adjusted to be at the end of the line."
               (hs-cycle)
               (should (string= "(()\n())"
                                (visible-buffer-string-no-properties)))
-              );; bug
+              );; bug?
             (it ()
               (insert string-of-buffer)
               (beginning-of-buffer)
               (hs-cycle)
               (hs-cycle)
               (hs-cycle)
-              (should (string= "((\n)\n(\n))"
+              (should (string= string-of-buffer
                                (visible-buffer-string-no-properties)))
               )
             )
           (context ("with indent" :vars ((string-of-buffer
+
                                           "\
 \((
   )
@@ -757,7 +756,7 @@ and then further adjusted to be at the end of the line."
               (insert string-of-buffer)
               (beginning-of-buffer)
               (hs-cycle)
-              (should (string= "()"
+              (should (string= "(()"
                                (visible-buffer-string-no-properties)))
               );; (()) is better?
             (it ()
@@ -774,7 +773,7 @@ and then further adjusted to be at the end of the line."
               (hs-cycle)
               (hs-cycle)
               (hs-cycle)
-              (should (string= "((\n  )\n (\n  ))"
+              (should (string= string-of-buffer
                                (visible-buffer-string-no-properties)))
               )
             )
@@ -786,7 +785,7 @@ and then further adjusted to be at the end of the line."
               (insert string-of-buffer)
               (beginning-of-buffer)
               (hs-cycle)
-              (should (string= "()"
+              (should (string= "(()";; "()"
                                (visible-buffer-string-no-properties)))
               );; (()) is better?
             (it ()
@@ -803,7 +802,37 @@ and then further adjusted to be at the end of the line."
               (hs-cycle)
               (hs-cycle)
               (hs-cycle)
+              (should (string= string-of-buffer
+                               (visible-buffer-string-no-properties)))
+              )
+            )
+          (context ("nested element" :vars ((string-of-buffer
+                                        "\
+\(
+ ((
+   )))")))
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
               (should (string= "()"
+                               (visible-buffer-string-no-properties)))
+              );; (()) is better?
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= "(\n (())" ;; "(\n ())"
+                               (visible-buffer-string-no-properties)))
+              )
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= string-of-buffer
                                (visible-buffer-string-no-properties)))
               );; bug
             )
@@ -867,6 +896,87 @@ end")))
             (insert string-of-buffer)
             (hs-hide-all)
             (should (string= "def hogeend"
+                             (visible-buffer-string)))
+            )
+          )
+        (context ("multi" :vars ((string-of-buffer "\
+def a
+end
+def b
+end")))
+          (it ()
+            (insert string-of-buffer)
+            (hs-hide-all)
+            (should (string= "\
+def aend
+def bend"
+                             (visible-buffer-string-no-properties)))
+            )
+          )
+        (context ("multi indent" :vars ((string-of-buffer "\
+  def a
+  end
+  def b
+  end")))
+          (it ()
+            (insert string-of-buffer)
+            (hs-hide-all)
+            (should (string= "\
+  def aend
+  def bend"
+                             (visible-buffer-string-no-properties)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (goto-char 3)
+            (hs-hide-block-at-point t)
+            (should (string= "\
+  def aend
+  def b
+  end"
+                             (visible-buffer-string-no-properties)))
+            )
+  ;;         (it ()
+  ;;           (insert string-of-buffer)
+  ;;           (goto-char 6)
+  ;;           (hs-hide-block-at-point t)
+  ;;           (should (string= "\
+  ;; def aend
+  ;; def b
+  ;; end"
+  ;;                            (visible-buffer-string-no-properties)))
+  ;;           )
+          )
+        (context ("nested" :vars ((string-of-buffer "\
+class Foo
+  def a
+  end
+  def b
+  end
+end")))
+          (it ()
+            (insert string-of-buffer)
+            (beginning-of-buffer)
+            (hs-cycle)
+            (hs-cycle)
+            (should (string= "\
+class Foo
+  def aend
+  def bend
+end"
+                             (visible-buffer-string-no-properties)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (goto-char 1)
+            (hs-hide-block-at-point t)
+            (should (string= "class Fooend"
+                             (visible-buffer-string)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (hs-hide-all)
+            (should (string= "class Fooend"
                              (visible-buffer-string)))
             )
           )
