@@ -283,6 +283,7 @@ Delete hideshow overlays in region defined by FROM and TO.
       (narrow-to-region from to)
       (hs-inside-comment-p))))
 
+(hs-cycle:save-original-func hs-inside-comment-p)
 ;; (1 2) ";_"
 ;; (nil 2) ";\n_"
 ;; nil "_"
@@ -557,14 +558,40 @@ and then further adjusted to be at the end of the line."
         ;; todo: add count-lines test-cases
         (it ()
           (insert string-of-buffer)
-          (should-error (hs-hide-all));; bug
+          (should-error (hs-hide-all-org));; bug
           )
         (it ()
           (insert string-of-buffer)
-          (hs-cycle:hs-hide-all)
+          (hs-hide-all)
           (should (string= ";;a\n\n\"(\"\n;(\n(if)\n\n ;a\n\n"
                            (visible-buffer-string-no-properties))))
-        (context "hs-find-block-at-point"
+        (context "hs-inside-comment-p"
+          (it ()
+            (insert ";")
+            (should (equal (hs-inside-comment-p) '(1 2))))
+          (it ()
+            (beginning-of-buffer)
+            (insert ";")
+            (should (equal (hs-inside-comment-p) '(1 2))))
+          (it ()
+            (should (equal (hs-inside-comment-p) nil)))
+          (it ()
+            (insert " ")
+            (should (equal (hs-inside-comment-p) nil)))
+          (it ()
+            (insert "a")
+            (should (equal (hs-inside-comment-p) nil)))
+          (it ()
+            (insert "a;")
+            (should (equal (hs-inside-comment-p) '(nil 3))))
+          (it ()
+            (insert "\na;")
+            (should (equal (hs-inside-comment-p) '(nil 4))))
+          (it ()
+            (insert "a;\n")
+            (should (equal (hs-inside-comment-p) nil)));; ?
+          )
+        (context "hs-find-block-beginning"
           (it ()
             (insert "\"(\"")
             (should-error (hs-find-block-beginning-org)) ;; bug
@@ -944,14 +971,35 @@ end")))
           (it ()
             (insert "\"{\"")
             (goto-char 2)
-            (should (eq nil (hs-cycle:hs-hide-block-at-point t)))
+            (should (eq nil (hs-hide-block-at-point t)))
             )
           (it ()
             (insert ";{")
             (goto-char 2)
-            (should (eq nil (hs-cycle:hs-hide-block-at-point t)))
+            (should (eq nil (hs-hide-block-at-point t)))
             )
           ))
+      (context ("in c mode" :vars ((mode 'c-mode)
+                                   (string-of-buffer
+                                    "void func(void){
+a}"
+                                    )))
+        (it ()
+          (insert string-of-buffer)
+          (goto-char 16)
+          (hs-hide-block-at-point t)
+          (should (string= "void func(void){}"
+                           (visible-buffer-string)))
+          )
+        ;; not yet
+        ;; (it ()
+        ;;   (insert string-of-buffer)
+        ;;   (goto-char 1)
+        ;;   (hs-hide-block-at-point t)
+        ;;   (should (string= "void func(void){}"
+        ;;                    (visible-buffer-string)))
+        ;;   )
+        )
       ))
   )
 
