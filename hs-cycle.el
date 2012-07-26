@@ -179,8 +179,8 @@ ARGS"
     ;;------------
     ;; modify for comment or string
     ;;------------
-    (if (and (looking-at hs-block-start-regexp)
-             (not (hs-cycle:comment-or-string-p)))
+    (if (and (not (hs-cycle:comment-or-string-p))
+             (looking-at hs-block-start-regexp))
         (point)
       ;; look backward for the start of a block that contains the cursor
       (while (and (re-search-backward hs-block-start-regexp nil t)
@@ -218,15 +218,10 @@ Delete hideshow overlays in region defined by FROM and TO.
        (c-reg
         (setq from (nth 0 c-reg))
         (setq to (nth 1 c-reg)))
-       ((or (and hs-block-start-regexp
-                 (looking-at hs-block-start-regexp));; ok? for 2 charactor
-            (hs-find-block-beginning)
-            )
+       ((or (hs-find-block-beginning))
         ;; (hs-hide-block-at-point end c-reg)
         (setq from (point))
-        (condition-case err
-            (hs-forward-sexp (match-data t) 1)
-          (error (end-of-visual-line)))
+        (funcall hs-forward-sexp-func 1);; don't save match data
         (setq to (point))
         ;;(overlay-put (make-overlay minp maxp 'face 'lazy-highlight))
         ))
@@ -254,11 +249,13 @@ Delete hideshow overlays in region defined by FROM and TO.
               (null bounds-of-comment)
               (save-excursion
                 ;; copy from hs-hide-level-recursive
-                (when (hs-find-block-beginning)
+                (when (and (hs-find-block-beginning)
+                           ;; fresh match-data
+                           (looking-at hs-block-start-regexp))
                   (setq from (match-end 0))
                   ;; need error handling?
-                  (hs-forward-sexp (match-data t) 1)
-                  ;; (funcall hs-forward-sexp-func 1)
+                  (funcall hs-forward-sexp-func 1);; don't save match data
+                  ;; don't save match data in hs-block-start-mdata-select
                   (setq to (if (looking-back hs-block-end-regexp)
                                (match-beginning 0)
                              (point)))
@@ -449,10 +446,12 @@ as cdr."
     str))
 
 (defun hs-cycle:comment-or-string-p ()
+  ;; syntax-ppss chagnes match-data
+  (save-match-data
   (let ((state (syntax-ppss)))
     (or (nth 3 state)
         (nth 4 state))
-    ))
+      )))
 
 (hs-cycle:save-original-func hs-hide-all)
 
