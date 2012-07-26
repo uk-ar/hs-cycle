@@ -135,6 +135,33 @@ ARGS"
           )))
     total))
 
+(hs-cycle:save-original-func hs-hide-level-recursive)
+
+(defun hs-hide-level-recursive (arg minp maxp)
+  "Recursively hide blocks ARG levels below point in region (MINP MAXP)."
+  (when (hs-find-block-beginning)
+    (setq minp (1+ (point)))
+    (funcall hs-forward-sexp-func 1)
+    (setq maxp (1- (point))))
+  (unless hs-allow-nesting
+    (hs-discard-overlays minp maxp))
+  (goto-char minp)
+  (while (progn
+           (forward-comment (buffer-size))
+           (and (< (point) maxp)
+                (re-search-forward hs-block-start-regexp maxp t)))
+    ;;------------
+    ;; modify for comment or string
+    ;;------------
+    (unless (hs-cycle:comment-or-string-p)
+      (if (> arg 1)
+          (hs-hide-level-recursive (1- arg) minp maxp)
+        (goto-char (match-beginning hs-block-start-mdata-select))
+        (hs-hide-block-at-point t))))
+  (goto-char maxp))
+
+;; it should use re-search-forward before forward-sexp
+
 ;;(it (:vars ((cmd "(")))
 ;;hs-already-hidden-p
 ;;hs-find-block-beginning raise error when after "("
