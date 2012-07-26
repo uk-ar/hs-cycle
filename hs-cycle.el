@@ -565,8 +565,7 @@ and then further adjusted to be at the end of the line."
           (funcall mode)
           (funcall el-spec:example)))
       (context ("in emacs-lisp-mode" :vars ((mode 'emacs-lisp-mode)
-                                            (string-of-buffer
-                                             "\
+                                            (string-of-buffer "\
 ;;a
 ;;b
 
@@ -694,8 +693,7 @@ and then further adjusted to be at the end of the line."
             )
           )
         (context "hs-cycle"
-          (context ("with no-indent" :vars ((string-of-buffer
-                                             "\
+          (context ("with no-indent" :vars ((string-of-buffer "\
 \((
 )
 \(
@@ -725,9 +723,7 @@ and then further adjusted to be at the end of the line."
                                (visible-buffer-string-no-properties)))
               )
             )
-          (context ("with indent" :vars ((string-of-buffer
-
-                                          "\
+          (context ("with indent" :vars ((string-of-buffer "\
 \((
   )
  (
@@ -745,6 +741,87 @@ and then further adjusted to be at the end of the line."
               (hs-cycle)
               (hs-cycle)
               (should (string= "(()\n ())"
+                               (visible-buffer-string-no-properties)))
+              )
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= string-of-buffer
+                               (visible-buffer-string-no-properties)))
+              )
+            )
+          (context ("with string" :vars ((string-of-buffer "\
+\(\"(\"
+ )")))
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (should (string= "(\"(\")"
+                               (visible-buffer-string-no-properties)))
+              );; (()) is better?
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= string-of-buffer
+                               (visible-buffer-string-no-properties)))
+              )
+            )
+          (context ("with string multi" :vars ((string-of-buffer "\
+\(\"(\"
+ (
+)
+ (
+))")))
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (should (string= "(\"(\")"
+                               (visible-buffer-string-no-properties)))
+              );; (()) is better?
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= "(\"(\"\n ()\n ())"
+                               (visible-buffer-string-no-properties)))
+              )
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= string-of-buffer
+                               (visible-buffer-string-no-properties)))
+              )
+            )
+          (context ("with comment multi" :vars ((string-of-buffer "\
+\(;(
+ (
+)
+ (
+))")))
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (should (string= "(;()"
+                               (visible-buffer-string-no-properties)))
+              );; (()) is better?
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= "(;(\n ()\n ())"
                                (visible-buffer-string-no-properties)))
               )
             (it ()
@@ -819,8 +896,7 @@ and then further adjusted to be at the end of the line."
           )
         )
       (context ("in ruby mode" :vars ((mode 'ruby-mode)
-                                      (string-of-buffer
-                                       "\
+                                      (string-of-buffer "\
 #a
 #b
 
@@ -1123,7 +1199,7 @@ a}"
           (hs-inside-comment-p)
           ))
       (desc "hoge")
-      (expect nil;; bug
+      (expect nil;; ok
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "\na ;")
@@ -1131,7 +1207,7 @@ a}"
           (font-lock-fontify-buffer)
           (hs-inside-comment-p)
           ))
-      (expect nil;; bug
+      (expect nil;; ok
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "\na;")
@@ -1139,7 +1215,7 @@ a}"
           (font-lock-fontify-buffer)
           (hs-inside-comment-p)
           ))
-      (expect nil;; bug
+      (expect nil;; ok
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "\nhoge ;")
@@ -1147,7 +1223,7 @@ a}"
           (font-lock-fontify-buffer)
           (hs-inside-comment-p)
           ))
-      (expect nil;; bug
+      (expect nil;; ok
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "hoge ;")
@@ -1155,7 +1231,7 @@ a}"
           (font-lock-fontify-buffer)
           (hs-inside-comment-p)
           ))
-      (expect nil;; bug
+      (expect nil;; ok
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "hoge")
@@ -1163,7 +1239,7 @@ a}"
           (font-lock-fontify-buffer)
           (hs-inside-comment-p)
           ))
-      (expect '(nil 7);; bug
+      (expect '(nil 7);; ok
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "\nhoge;")
