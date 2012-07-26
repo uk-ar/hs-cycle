@@ -135,67 +135,63 @@ ARGS"
           )))
     total))
 
-(hs-cycle:save-original-func hs-hide-level-recursive)
+;; when emacs version < 24.1 only
+;; bug fix - ignore comment or string
+;; copy from emacs 24.1
+(when
+    (version-list-< `(,emacs-major-version ,emacs-minor-version) '(24 1))
 
-(defun hs-hide-level-recursive (arg minp maxp)
-  "Recursively hide blocks ARG levels below point in region (MINP MAXP)."
-  (when (hs-find-block-beginning)
-    (setq minp (1+ (point)))
-    (funcall hs-forward-sexp-func 1)
-    (setq maxp (1- (point))))
-  (unless hs-allow-nesting
-    (hs-discard-overlays minp maxp))
-  (goto-char minp)
-  (while (progn
-           (forward-comment (buffer-size))
-           (and (< (point) maxp)
-                (re-search-forward hs-block-start-regexp maxp t)))
-    ;;------------
-    ;; modify for comment or string
-    ;;------------
-    (unless (hs-cycle:comment-or-string-p)
-      (if (> arg 1)
-          (hs-hide-level-recursive (1- arg) minp maxp)
-        (goto-char (match-beginning hs-block-start-mdata-select))
-        (hs-hide-block-at-point t))))
-  (goto-char maxp))
+  (defun hs-looking-at-block-start-p ()
+    "Return non-nil if the point is at the block start."
+    (and (looking-at hs-block-start-regexp)
+         (save-match-data (not (nth 8 (syntax-ppss))))))
 
-;; it should use re-search-forward before forward-sexp
+  (hs-cycle:save-original-func hs-hide-level-recursive)
+  (defun hs-hide-level-recursive (arg minp maxp)
+    "Recursively hide blocks ARG levels below point in region (MINP MAXP)."
+    (when (hs-find-block-beginning)
+      (setq minp (1+ (point)))
+      (funcall hs-forward-sexp-func 1)
+      (setq maxp (1- (point))))
+    (unless hs-allow-nesting
+      (hs-discard-overlays minp maxp))
+    (goto-char minp)
+    (while (progn
+             (forward-comment (buffer-size))
+             (and (< (point) maxp)
+                  (re-search-forward hs-block-start-regexp maxp t)))
+      (when (save-match-data
+              (not (nth 8 (syntax-ppss)))) ; not inside comments or strings
+        (if (> arg 1)
+            (hs-hide-level-recursive (1- arg) minp maxp)
+          (goto-char (match-beginning hs-block-start-mdata-select))
+          (hs-hide-block-at-point t))))
+    (goto-char maxp))
 
-;;(it (:vars ((cmd "(")))
-;;hs-already-hidden-p
-;;hs-find-block-beginning raise error when after "("
-;;hs-already-hidden-p raise error when before "("
-
-(hs-cycle:save-original-func hs-find-block-beginning)
-
-;;this is for hs-already-hidden-p
-(defun hs-find-block-beginning ()
-  "Reposition point at block-start.
-  Return point, or nil if original point was not in a block."
-  (let ((done nil)
-        (here (point)))
-    ;; look if current line is block start
-    ;;------------
-    ;; modify for comment or string
-    ;;------------
-    (if (and (not (hs-cycle:comment-or-string-p))
-             (looking-at hs-block-start-regexp))
-        (point)
-      ;; look backward for the start of a block that contains the cursor
-      (while (and (re-search-backward hs-block-start-regexp nil t)
-                  (not (setq done
-                             (< here (save-excursion
-                                       ;;------------
-                                       ;; modify for comment or string
-                                       ;;------------
-                                       (unless (hs-cycle:comment-or-string-p)
-                                         (hs-forward-sexp (match-data t) 1))
-                                       (point)))))))
-      (if done
+  (hs-cycle:save-original-func hs-find-block-beginning)
+  (defun hs-find-block-beginning ()
+    "Reposition point at block-start.
+Return point, or nil if original point was not in a block."
+    (let ((done nil)
+          (here (point)))
+      ;; look if current line is block start
+      (if (hs-looking-at-block-start-p)
           (point)
-        (goto-char here)
-        nil))))
+        ;; look backward for the start of a block that contains the cursor
+        (while (and (re-search-backward hs-block-start-regexp nil t)
+                    ;; go again if in a comment or a string
+                    (or (save-match-data (nth 8 (syntax-ppss)))
+                        (not (setq done
+                                   (< here (save-excursion
+                                             (hs-forward-sexp (match-data t) 1)
+                                             (point))))))))
+        (if done
+            (point)
+          (goto-char here)
+          nil))))
+  )
+
+
 
 "("
 
