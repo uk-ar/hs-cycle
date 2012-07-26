@@ -719,18 +719,22 @@ Delete hideshow overlays in region defined by FROM and TO.
             (should (equal (hs-inside-comment-p) nil)));; ?
           )
         (context "hs-find-block-beginning"
-          (it ()
-            (insert "\"(\"")
-            (should-error (hs-find-block-beginning-org)) ;; bug
-            )
-          (it ()
-            (insert ";(")
-            (should-error (hs-find-block-beginning-org)) ;; bug
-            )
-          (it ()
-            (insert "(;(\n)")
-            (backward-char)
-            (should-not (eq 1 (hs-find-block-beginning-org)));; bug
+          (when
+              (version-list-<
+               `(,emacs-major-version ,emacs-minor-version) '(24 1))
+            (it ()
+              (insert "\"(\"")
+              (should-error (hs-find-block-beginning-org)) ;; bug
+              )
+            (it ()
+              (insert ";(")
+              (should-error (hs-find-block-beginning-org)) ;; bug
+              )
+            (it ()
+              (insert "(;(\n)")
+              (backward-char)
+              (should-not (eq 1 (hs-find-block-beginning-org)));; bug
+              )
             )
           (it ()
             (insert "()")
@@ -993,7 +997,7 @@ Delete hideshow overlays in region defined by FROM and TO.
               (hs-cycle)
               (should (string= string-of-buffer
                                (visible-buffer-string-no-properties)))
-              );; bug
+              )
             )
           )
         )
