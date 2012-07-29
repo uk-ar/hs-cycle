@@ -287,13 +287,29 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
 
 ;; copy from hs-inside-comment-p
 ;; return nil when not in comment
-(defun hs-cycle:inside-comment-p ()
-  (let ((from (save-excursion
-                ;; (backward-blankline)
-                ))
-        (to (save-excursion
-              (forward-sentence))))
-    (save-excursion
+(defun hs-cycle:hs-inside-comment-p ()
+  (let ((from
+         (save-excursion
+           ;; copy from delete-blank-lines
+           (if (re-search-backward "^[ \t]*$" nil t)
+               (progn (forward-line) (point))
+             (point-min))
+           ))
+        (to
+         (save-excursion
+           (if (re-search-forward "^[ \t]*$" nil t)
+               (progn
+                 (forward-line)
+                 (while (looking-at "^[ \t]*$")
+                   (forward-line))
+                 (backward-char)
+                 (point))
+             (point-max)))))
+        ;; (if (re-search-backward "[^ \t\n]" nil t)
+        ;;     (progn (forward-line 1) (point))
+        ;;   (point-min))
+        ;; (forward-sentence))))
+    (save-restriction
       (narrow-to-region from to)
       (hs-inside-comment-p))))
 
