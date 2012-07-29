@@ -587,10 +587,10 @@ Delete hideshow overlays in region defined by FROM and TO.
 "
                                              )))
         ;; todo: add count-lines test-cases
-        (it ()
-          (insert string-of-buffer)
-          (should-error (hs-hide-all-org));; bug
-          )
+        ;; (it ()
+        ;;   (insert string-of-buffer)
+        ;;   (should-error (hs-hide-all-org));; bug for infinite loop
+        ;;   )
         (it ()
           (insert string-of-buffer)
           (hs-hide-all)
@@ -601,9 +601,24 @@ Delete hideshow overlays in region defined by FROM and TO.
             (insert ";")
             (should (equal (hs-inside-comment-p) '(1 2))))
           (it ()
-            (beginning-of-buffer)
             (insert ";")
+            (beginning-of-buffer)
             (should (equal (hs-inside-comment-p) '(1 2))))
+          (it ()
+            (insert ";;")
+            (should (equal (hs-inside-comment-p) '(1 3))))
+          (it ()
+            (insert ";;")
+            (goto-char 2)
+            (should (equal (hs-inside-comment-p) '(1 3))))
+          (it ()
+            (insert " ;")
+            (beginning-of-buffer)
+            (should (equal (hs-inside-comment-p) '(2 3))));; strange spec?
+          (it ()
+            (insert "a ;")
+            (goto-char 2)
+            (should (equal (hs-inside-comment-p) '(nil 4))));; strange spec?
           (it ()
             (should (equal (hs-inside-comment-p) nil)))
           (it ()
@@ -616,11 +631,84 @@ Delete hideshow overlays in region defined by FROM and TO.
             (insert "a;")
             (should (equal (hs-inside-comment-p) '(nil 3))))
           (it ()
+            (c-mode)
+            (insert "a/**/")
+            (backward-char)
+            (should (equal (hs-inside-comment-p) '(nil 6))))
+          (it ()
+            (c-mode)
+            (insert "a/**/ab")
+            (goto-char 2)
+            (should (equal (hs-inside-comment-p-org) '(nil 8))));; bug?
+          (it ()
+            (c-mode)
+            (insert "a/**/ab")
+            (goto-char 2)
+            (should (equal (hs-inside-comment-p) '(nil 6))));; bug?
+          (it ()
             (insert "\na;")
-            (should (equal (hs-inside-comment-p) '(nil 4))))
+            (should (equal (hs-inside-comment-p-org) nil)));;bug?
+          (it ()
+            (insert "\na;")
+            (should (equal (hs-inside-comment-p) '(nil 4))));;fix
+          (it ()
+            (insert " ;\n;")
+            (should (equal (hs-inside-comment-p) '(2 5))))
+          (it ()
+            (insert ";\n;")
+            (should (equal (hs-inside-comment-p) '(1 4))))
+          (it ()
+            (insert "; ;")
+            (should (equal (hs-inside-comment-p-org) '(3 4))));;bug?
+          (it ()
+            (insert "; ;")
+            (should (equal (hs-inside-comment-p) '(1 4))));;fix
+          (it ()
+            (insert ";\n")
+            (should (equal (hs-inside-comment-p-org) nil)));; ok?
           (it ()
             (insert "a;\n")
-            (should (equal (hs-inside-comment-p) nil)));; ?
+            (should (equal (hs-inside-comment-p) nil)));; ok?
+          (it ()
+            (insert "a;\n;")
+            (should (equal (hs-inside-comment-p-org) '(4 5))));; bug?
+          (it ()
+            (insert "a;\n;")
+            (should (equal (hs-inside-comment-p) '(2 5))));; fix
+          (it ()
+            (insert "a;\n;")
+            (goto-char 2)
+            (should (equal (hs-inside-comment-p-org) '(nil 3))));; bug
+          (it ()
+            (insert "a;\n;")
+            (goto-char 2)
+            (should (equal (hs-inside-comment-p) '(nil 5))));; fix
+          (it ()
+            (insert "\";\"")
+            (should (equal (hs-inside-comment-p-org) '(nil 4))));; bug
+          (it ()
+            (insert "\";\"")
+            (should (equal (hs-inside-comment-p) nil)));; fix
+          (it ()
+            (insert "\";\"")
+            (goto-char 2)
+            (should (equal (hs-inside-comment-p-org) '(nil 4))));; bug
+          (it ()
+            (insert "\";\"")
+            (goto-char 2)
+            (should (equal (hs-inside-comment-p) nil)));; fix
+          (it ()
+            (insert "\
+;
+
+;")
+            (should (equal (hs-inside-comment-p) '(1 5))))
+          (it ()
+            (insert "\
+;
+
+;")
+            (should (equal (hs-cycle:hs-inside-comment-p) '(4 5))));; extend
           )
         (context "hs-find-block-beginning"
           (when
@@ -703,7 +791,48 @@ Delete hideshow overlays in region defined by FROM and TO.
             )
           )
         (context "hs-cycle"
-          (context ("with no-indent" :vars ((string-of-buffer "\
+          (context ("1 comment"
+                    :vars ((string-of-buffer "\
+;;
+;;")))
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (should (string= ";;"
+                               (visible-buffer-string-no-properties)))
+              )
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= string-of-buffer
+                               (visible-buffer-string-no-properties)))
+              )
+            )
+          (context ("1 comment with pre"
+                    :vars ((string-of-buffer "\
+a;;
+;;")))
+            (it ()
+              (insert string-of-buffer)
+              (goto-char 2)
+              (hs-cycle)
+              (should (string= "a;;"
+                               (visible-buffer-string-no-properties)))
+              )
+            (it ()
+              (insert string-of-buffer)
+              (goto-char 2)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= string-of-buffer
+                               (visible-buffer-string-no-properties)))
+              )
+            )
+          (context ("with no-indent"
+                    :vars ((string-of-buffer "\
 \((
 )
 \(
@@ -1270,6 +1399,7 @@ a}"
           (font-lock-fontify-buffer)
           (hs-inside-comment-p)
           ))
+      (desc "comment")
       (expect ";;hoge"
         (with-temp-buffer
           (emacs-lisp-mode)
@@ -1280,79 +1410,7 @@ a}"
           (hs-cycle)
           (visible-buffer-substring-no-properties (point-min) (point-max))
           ))
-      (expect nil
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert hs-cycle-test-string2)
-          (goto-char 1)
-          (font-lock-fontify-buffer)
-          (hs-inside-comment-p)
-          ))
-      (expect nil
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert "\n")
-          (insert hs-cycle-test-string2)
-          (goto-char 2)
-          (font-lock-fontify-buffer)
-          (hs-inside-comment-p)
-          ))
-      (expect nil
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert hs-cycle-test-string2)
-          (goto-char 18)
-          (font-lock-fontify-buffer)
-          (hs-inside-comment-p)
-          ))
-      (expect 1
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert hs-cycle-test-string2)
-          (goto-char 2)
-          (font-lock-fontify-buffer)
-          (hs-cycle:hs-find-block-beginning)
-          ))
-      (expect 1
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert hs-cycle-test-string2)
-          (goto-char 1)
-          (font-lock-fontify-buffer)
-          (hs-cycle:hs-find-block-beginning)
-          ))
-      (expect 1
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert hs-cycle-test-string2)
-          (goto-char 15);; end of line
-          (font-lock-fontify-buffer)
-          (hs-cycle:hs-find-block-beginning)
-          ))
-      (expect nil
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert hs-cycle-test-string2)
-          (goto-char 1)
-          (font-lock-fontify-buffer)
-          (hs-inside-comment-p)
-          ))
-      (expect nil
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert hs-cycle-test-string2)
-          (goto-char 2)
-          (font-lock-fontify-buffer)
-          (hs-inside-comment-p)
-          ))
-      (expect nil
-        (with-temp-buffer
-          (emacs-lisp-mode)
-          (insert hs-cycle-test-string)
-          (goto-char 1)
-          (font-lock-fontify-buffer)
-          (hs-inside-comment-p)
-          ))
+      (desc "count-overlay")
       (expect 0
         (with-temp-buffer
           (emacs-lisp-mode)
