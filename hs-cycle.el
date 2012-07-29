@@ -92,7 +92,6 @@
    '(lambda()
       (hs-minor-mode)
       (hs-org/minor-mode)
-      ;;(textmate-mode)
       ;; (if (not(eq window-system nil))
       ;; (hideshowvis-enable))
       )
@@ -546,12 +545,13 @@ Delete hideshow overlays in region defined by FROM and TO.
   ;; syntax-ppss chagnes match-data
   (save-match-data
   (let ((state (syntax-ppss)))
-    (or (nth 3 state)
-        (nth 4 state))
+    (or (nth 3 state);; string
+        (nth 4 state));; comment
       )))
 
 
-(defun hs-cycle:next-block-beginning ()
+(defun hs-cycle:forward-block-beginning (arg)
+  ;; todo arg,save match
   (condition-case err
       (save-excursion
         (while (and (re-search-forward hs-block-start-regexp nil nil)
@@ -559,8 +559,6 @@ Delete hideshow overlays in region defined by FROM and TO.
         (match-beginning 0))
     (search-failed
      nil)))
-
-
 
 (dont-compile
   (when (fboundp 'describe)
