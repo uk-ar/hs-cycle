@@ -193,7 +193,8 @@ Return point, or nil if original point was not in a block."
 
 (hs-cycle:save-original-func hs-hide-block-at-point)
 
-;; fix for no indent
+;; modify from emacs 24.1
+;; fix for no space
 (defun hs-hide-block-at-point (&optional end comment-reg)
   "Hide block if on block beginning.
 Optional arg END means reposition at end.
@@ -205,11 +206,10 @@ The block beginning is adjusted by `hs-adjust-block-beginning'
 and then further adjusted to be at the end of the line."
   (if comment-reg
       (hs-hide-comment-region (car comment-reg) (cadr comment-reg) end)
-    (when (looking-at hs-block-start-regexp)
-      (let* ((mdata (match-data t))
-             (header-beg (match-beginning 0))
-             (header-end (match-end 0))
-             p q ov)
+    (when (hs-looking-at-block-start-p)
+      (let ((mdata (match-data t))
+            (header-end (match-end 0))
+            p q ov)
         ;; `p' is the point at the end of the block beginning, which
         ;; may need to be adjusted
         (save-excursion
@@ -226,6 +226,7 @@ and then further adjusted to be at the end of the line."
         ;;------------
         ;; modify for (\n)
         ;;------------
+        ;; (when (and (< p q) (> (count-lines p q) 1))
         (when (and (< p q) (> (count-lines p (min (1+ q) (point-max))) 1))
           (cond ((and hs-allow-nesting (setq ov (hs-overlay-at p)))
                  (delete-overlay ov))
@@ -233,49 +234,9 @@ and then further adjusted to be at the end of the line."
                  (hs-discard-overlays p q)))
           (hs-make-overlay p q 'code (- header-end p)))
         (goto-char (if end q (min p header-end)))))))
-;; copy from emacs 24.1
-;; 24.1 have infinite bug? or hs-inside-comment-p bug?
-;; (defun hs-hide-block-at-point (&optional end comment-reg)
-;;   "Hide block if on block beginning.
-;; Optional arg END means reposition at end.
-;; Optional arg COMMENT-REG is a list of the form (BEGIN END) and
-;; specifies the limits of the comment, or nil if the block is not
-;; a comment.
-
-;; The block beginning is adjusted by `hs-adjust-block-beginning'
-;; and then further adjusted to be at the end of the line."
-;;   (if comment-reg
-;;       (hs-hide-comment-region (car comment-reg) (cadr comment-reg) end)
-;;     (when (hs-looking-at-block-start-p)
-;;       (let ((mdata (match-data t))
-;;             (header-end (match-end 0))
-;;             p q ov)
-;;         ;; `p' is the point at the end of the block beginning, which
-;;         ;; may need to be adjusted
-;;         (save-excursion
-;;           (if hs-adjust-block-beginning
-;;               (goto-char (funcall hs-adjust-block-beginning
-;;                                   header-end))
-;;             (goto-char header-end))
-;;           (setq p (line-end-position)))
-;;         ;; `q' is the point at the end of the block
-;;         (hs-forward-sexp mdata 1)
-;;         (setq q (if (looking-back hs-block-end-regexp)
-;;                     (match-beginning 0)
-;;                   (point)))
-;;         ;;------------
-;;         ;; modify for (\n)
-;;         ;;------------
-;;         (when (and (< p q) (> (count-lines p (min (1+ q) (point-max))) 1))
-;;           ;; (when (and (< p q) (> (count-lines p q) 1))
-;;           (cond ((and hs-allow-nesting (setq ov (hs-overlay-at p)))
-;;                  (delete-overlay ov))
-;;                 ((not hs-allow-nesting)
-;;                  (hs-discard-overlays p q)))
-;;           (hs-make-overlay p q 'code (- header-end p)))
-;;         (goto-char (if end q (min p header-end)))))))
 
 (hs-cycle:save-original-func hs-hide-all)
+;; modify from emacs 24.1
 ;; bug fix - ignore comment or string
 (defun hs-hide-all ()
   "Hide all top level blocks, displaying only first and last lines.
@@ -337,10 +298,9 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
       (hs-inside-comment-p))))
 
 (hs-cycle:save-original-func hs-inside-comment-p)
-;; (1 2) ";_"
-;; (nil 2) ";\n_"
-;; nil "_"
-;; bug fix for ;; ;; comment
+;; (fset 'hs-inside-comment-p (symbol-function 'hs-inside-comment-p-org))
+
+;; modify from emacs 24.1
 ;; need error handling when hs-c-start-regexp is nil
 (defun hs-inside-comment-p ()
   "Return non-nil if point is inside a comment, otherwise nil.
@@ -352,133 +312,61 @@ we return a list having a nil as its car and the end of comment position
 as cdr."
   (save-excursion
     ;; the idea is to look backwards for a comment start regexp, do a
-    ;; forward comment, and see if we are inside, then extend extend
+    ;; forward comment, and see if we are inside, then extend
     ;; forward and backward as long as we have comments
-    (let ((q (point))
-          (hs-cycle:special-ctrl-a/e nil))
-      (when (or (looking-at hs-c-start-regexp)
-                ;; (re-search-backward hs-c-start-regexp (point-min) t))
-                ;;------------
-                ;; modify for ;; ;; comment
-                ;;------------
-                (goto-char (or (comment-beginning) (point-min))))
-        ;; first get to the beginning of this comment...
-        (while (and (not (bobp))
-                    ;; (= (point) (progn (forward-comment -1) (point))))
-                    ;;------------
-                    ;; modify for extend backward 1
-                    ;;------------
-                    (not (= (point) (progn (forward-comment -1) (point)))))
-          ;;------------
-          ;; modify for extend backward 2
-          ;;------------
-          ;; (forward-char -1)
-          )
-        ;; ...then extend backwards
-        (forward-comment (- (buffer-size)))
-        (skip-chars-forward " \t\n\f")
-        (let ((p (point))
-              (hidable t))
-          (beginning-of-line)
-          (unless (looking-at (concat "[ \t]*" hs-c-start-regexp))
-            ;; we are in this situation: (example)
-            ;; (defun bar ()
-            ;;      (foo)
-            ;;                ) ; comment
-            ;;                 ^
-            ;;   the point was here before doing (beginning-of-line)
-            ;; here we should advance till the next comment which
-            ;; eventually has only white spaces preceding it on the same
-            ;; line
-            (goto-char p)
-            (forward-comment 1)
-            (skip-chars-forward " \t\n\f")
-            (setq p (point))
-            (while (and (< (point) q)
-                        (> (point) p)
-                        (not (looking-at hs-c-start-regexp)))
-              ;; avoid an infinite cycle
-              (setq p (point))
+    (let ((q (point)))
+      (skip-chars-forward "[:blank:]")
+      ;;------------
+      ;; modify for "; ;" comment and at comment in string "";""
+      ;;------------
+      (let ((state (save-match-data (syntax-ppss))))
+        ;; (when (or (looking-at hs-c-start-regexp)
+        ;;           (re-search-backward hs-c-start-regexp (point-min) t))
+        (when (or (and (nth 4 state) (goto-char (nth 8 state)))
+                  (and (looking-at hs-c-start-regexp);; in case of ;;
+                       (nth 4 (save-excursion (syntax-ppss (match-end 0))))))
+          ;; (while (and (not (bobp))
+          ;;             (= (point) (progn (forward-comment -1) (point))))
+          ;;   (forward-char -1))
+          ;; first get to the beginning of this comment...
+
+          ;; ...then extend backwards
+          (forward-comment (- (buffer-size)))
+          (skip-chars-forward " \t\n\f")
+          (let ((p (point))
+                (hidable t))
+            (beginning-of-line)
+            (unless (looking-at (concat "[ \t]*" hs-c-start-regexp))
+              ;; we are in this situation: (example)
+              ;; (defun bar ()
+              ;;      (foo)
+              ;;                ) ; comment
+              ;;                 ^
+              ;;   the point was here before doing (beginning-of-line)
+              ;; here we should advance till the next comment which
+              ;; eventually has only white spaces preceding it on the same
+              ;; line
+              (goto-char p)
               (forward-comment 1)
-              (skip-chars-forward " \t\n\f"))
-            (when (or (not (looking-at hs-c-start-regexp))
-                      (> (point) q))
-              ;; we cannot hide this comment block
-              (setq hidable nil)))
-          ;; goto the end of the comment
-          (forward-comment (buffer-size))
-          (skip-chars-backward " \t\n\f")
-          ;;------------
-          ;; modify for first line
-          ;;------------
-          (unless (= (point) (point-min))
-            (end-of-line))
-          (message "%d initial:%d hidable:%S" p q hidable)
-          ;;------------
-          ;; modify for beginning of buffer
-          ;;------------
-          (when (and (>= (point) q)
-                     (or hidable;; (= p q)
-                         (not (eq (point-min) q))))
-            (list (and hidable p) (point))))))))
-;; copy from emacs 24.1
-;; (defun hs-inside-comment-p ()
-;;   "Return non-nil if point is inside a comment, otherwise nil.
-;; Actually, return a list containing the buffer position of the start
-;; and the end of the comment.  A comment block can be hidden only if on
-;; its starting line there is only whitespace preceding the actual comment
-;; beginning.  If we are inside of a comment but this condition is not met,
-;; we return a list having a nil as its car and the end of comment position
-;; as cdr."
-;;   (save-excursion
-;;     ;; the idea is to look backwards for a comment start regexp, do a
-;;     ;; forward comment, and see if we are inside, then extend
-;;     ;; forward and backward as long as we have comments
-;;     (let ((q (point)))
-;;       (skip-chars-forward "[:blank:]")
-;;       (when (or (looking-at hs-c-start-regexp)
-;;                 (re-search-backward hs-c-start-regexp (point-min) t))
-;;         ;; first get to the beginning of this comment...
-;;         (while (and (not (bobp))
-;;                     (= (point) (progn (forward-comment -1) (point))))
-;;           (forward-char -1))
-;;         ;; ...then extend backwards
-;;         (forward-comment (- (buffer-size)))
-;;         (skip-chars-forward " \t\n\f")
-;;         (let ((p (point))
-;;               (hidable t))
-;;           (beginning-of-line)
-;;           (unless (looking-at (concat "[ \t]*" hs-c-start-regexp))
-;;             ;; we are in this situation: (example)
-;;             ;; (defun bar ()
-;;             ;;      (foo)
-;;             ;;                ) ; comment
-;;             ;;                 ^
-;;             ;;   the point was here before doing (beginning-of-line)
-;;             ;; here we should advance till the next comment which
-;;             ;; eventually has only white spaces preceding it on the same
-;;             ;; line
-;;             (goto-char p)
-;;             (forward-comment 1)
-;;             (skip-chars-forward " \t\n\f")
-;;             (setq p (point))
-;;             (while (and (< (point) q)
-;;                         (> (point) p)
-;;                         (not (looking-at hs-c-start-regexp)))
-;;               ;; avoid an infinite cycle
-;;               (setq p (point))
-;;               (forward-comment 1)
-;;               (skip-chars-forward " \t\n\f"))
-;;             (when (or (not (looking-at hs-c-start-regexp))
-;;                       (> (point) q))
-;;               ;; we cannot hide this comment block
-;;               (setq hidable nil)))
-;;           ;; goto the end of the comment
-;;           (forward-comment (buffer-size))
-;;           (skip-chars-backward " \t\n\f")
-;;           (end-of-line)
-;;           (when (>= (point) q)
-;;             (list (and hidable p) (point))))))))
+              (skip-chars-forward " \t\n\f")
+              (setq p (point))
+              (while (and (< (point) q)
+                          (> (point) p)
+                          (not (looking-at hs-c-start-regexp)))
+                ;; avoid an infinite cycle
+                (setq p (point))
+                (forward-comment 1)
+                (skip-chars-forward " \t\n\f"))
+              (when (or (not (looking-at hs-c-start-regexp))
+                        (> (point) q))
+                ;; we cannot hide this comment block
+                (setq hidable nil)))
+            ;; goto the end of the comment
+            (forward-comment (buffer-size))
+            (skip-chars-backward " \t\n\f")
+            (end-of-line)
+            (when (>= (point) q)
+              (list (and hidable p) (point)))))))))
 
 ;; copy from org-special-ctrl-a/e
 
