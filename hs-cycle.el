@@ -145,28 +145,6 @@ ARGS"
     (and (looking-at hs-block-start-regexp)
          (save-match-data (not (nth 8 (syntax-ppss))))))
 
-  (hs-cycle:save-original-func hs-hide-level-recursive)
-  (defun hs-hide-level-recursive (arg minp maxp)
-    "Recursively hide blocks ARG levels below point in region (MINP MAXP)."
-    (when (hs-find-block-beginning)
-      (setq minp (1+ (point)))
-      (funcall hs-forward-sexp-func 1)
-      (setq maxp (1- (point))))
-    (unless hs-allow-nesting
-      (hs-discard-overlays minp maxp))
-    (goto-char minp)
-    (while (progn
-             (forward-comment (buffer-size))
-             (and (< (point) maxp)
-                  (re-search-forward hs-block-start-regexp maxp t)))
-      (when (save-match-data
-              (not (nth 8 (syntax-ppss)))) ; not inside comments or strings
-        (if (> arg 1)
-            (hs-hide-level-recursive (1- arg) minp maxp)
-          (goto-char (match-beginning hs-block-start-mdata-select))
-          (hs-hide-block-at-point t))))
-    (goto-char maxp))
-
   (hs-cycle:save-original-func hs-find-block-beginning)
   (defun hs-find-block-beginning ()
     "Reposition point at block-start.
@@ -311,6 +289,56 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
     (save-restriction
       (narrow-to-region from to)
       (hs-inside-comment-p))))
+;; modify from emacs 24.1
+;; Add support for comment
+(hs-cycle:save-original-func hs-hide-level-recursive)
+(defun hs-hide-level-recursive (arg minp maxp)
+  "Recursively hide blocks ARG levels below point in region (MINP MAXP)."
+  (when (hs-find-block-beginning)
+    (setq minp (1+ (point)))
+    (funcall hs-forward-sexp-func 1)
+    (setq maxp (1- (point))))
+  (unless hs-allow-nesting
+    (hs-discard-overlays minp maxp))
+  (goto-char minp)
+  (let ((re (concat "\\("
+                    hs-block-start-regexp
+                    "\\)"
+                    (if hs-hide-comments-when-hiding-all
+                        (concat "\\|\\("
+                                hs-c-start-regexp
+                                "\\)")
+                      ""))))
+    (while (progn
+             (unless hs-hide-comments-when-hiding-all
+               ;; (point-max)
+               (forward-comment maxp))
+             ;; (point-max)
+             (and (< (point) maxp)
+                  (re-search-forward re maxp t)))
+      ;;------------
+      ;; modify for "(" ;; (
+      ;;------------
+      (if (and (match-beginning 1)
+               (not (save-match-data (nth 8 (syntax-ppss)))))
+          ;; we have found a block beginning
+          (if (> arg 1)
+              (hs-hide-level-recursive (1- arg) minp maxp)
+            (goto-char (match-beginning 1))
+            (if hs-hide-all-non-comment-function
+                (funcall hs-hide-all-non-comment-function)
+              (hs-hide-block-at-point t)))
+        ;; found a comment, probably
+        (let ((c-reg (hs-inside-comment-p)))
+          (when (and c-reg (car c-reg))
+            (if (> arg 1)
+                (hs-hide-level-recursive (1- arg) minp maxp)
+            (if (> (count-lines (car c-reg) (nth 1 c-reg)) 1)
+                (hs-hide-block-at-point t c-reg)
+              (goto-char (nth 1 c-reg)))))))
+      ))
+  (goto-char maxp)
+  )
 
 (hs-cycle:save-original-func hs-inside-comment-p)
 ;; (fset 'hs-inside-comment-p (symbol-function 'hs-inside-comment-p-org))
