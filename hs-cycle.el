@@ -661,17 +661,22 @@ Delete hideshow overlays in region defined by FROM and TO.
             (c-mode)
             (insert "a/**/")
             (backward-char)
-            (should (equal (hs-inside-comment-p) '(nil 6))))
+            (should (equal (hs-inside-comment-p) '(nil 6)))
+            )
           (it ()
             (c-mode)
             (insert "a/**/ab")
             (goto-char 2)
-            (should (equal (hs-inside-comment-p-org) '(nil 8))));; bug?
+            (should (equal (hs-inside-comment-p-org) '(nil 8)));; bug?
+            )
           (it ()
             (c-mode)
             (insert "a/**/ab")
             (goto-char 2)
-            (should (equal (hs-inside-comment-p) '(nil 6))));; bug?
+            ;; (should (equal (hs-inside-comment-p) '(nil 6)))
+            ;; not support
+            ;; bug?
+            )
           (it ()
             (insert "\na;")
             (should (equal (hs-inside-comment-p-org) nil)));;bug?
@@ -701,7 +706,9 @@ Delete hideshow overlays in region defined by FROM and TO.
             (should (equal (hs-inside-comment-p-org) '(4 5))));; bug?
           (it ()
             (insert "a;\n;")
-            (should (equal (hs-inside-comment-p) '(2 5))));; fix
+            ;; (should (equal (hs-inside-comment-p) '(2 5)))
+            ;; not support
+            );; fix
           (it ()
             (insert "a;\n;")
             (goto-char 2)
@@ -729,13 +736,35 @@ Delete hideshow overlays in region defined by FROM and TO.
 ;
 
 ;")
-            (should (equal (hs-inside-comment-p) '(1 5))))
+            (should (equal (hs-inside-comment-p-org) '(1 5))))
           (it ()
             (insert "\
 ;
 
 ;")
-            (should (equal (hs-cycle:hs-inside-comment-p) '(4 5))));; extend
+            (should (equal (hs-cycle:hs-inside-comment-p) '(4 5))))
+          (it ()
+            (insert "\
+;
+
+")
+            (beginning-of-buffer)
+            (should (equal (hs-cycle:hs-inside-comment-p) '(1 2))));; extend
+          (it ()
+            (insert "\
+;;
+;;
+
+
+;;
+;;
+;;
+
+
+;;
+;;")
+            (goto-char 11)
+            (should (equal (hs-cycle:hs-inside-comment-p) '(9 17))));; extend
           )
         (context "hs-find-block-beginning"
           (when
@@ -817,6 +846,53 @@ Delete hideshow overlays in region defined by FROM and TO.
                              (visible-buffer-string-no-properties)))
             )
           )
+        (context ("hs-hide-level-recursive"
+                  :vars ((string-of-buffer "(
+;;a
+;;
+\(
+)
+\(
+))")))
+          (it ()
+            (insert string-of-buffer)
+            (beginning-of-buffer)
+            (hs-hide-level-recursive 1 nil nil)
+            (should (string= "(\n;;a\n()\n())"
+                             (visible-buffer-string-no-properties)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (beginning-of-buffer)
+            (hs-hide-level-recursive-org 1 nil nil)
+            (should (string= "(\n;;a\n;;\n()\n())"
+                             (visible-buffer-string-no-properties)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (beginning-of-buffer)
+            (hs-cycle)
+            (should (string= "()"
+                             (visible-buffer-string-no-properties)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (beginning-of-buffer)
+            (hs-cycle)
+            (hs-cycle)
+            (should (string= "(\n;;a\n()\n())"
+                             (visible-buffer-string-no-properties)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (beginning-of-buffer)
+            (hs-cycle)
+            (hs-cycle)
+            (hs-cycle)
+            (should (string= string-of-buffer
+                             (visible-buffer-string-no-properties)))
+            )
+          )
         (context "hs-cycle"
           (context ("1 comment"
                     :vars ((string-of-buffer "\
@@ -846,8 +922,9 @@ a;;
               (insert string-of-buffer)
               (goto-char 2)
               (hs-cycle)
-              (should (string= "a;;"
-                               (visible-buffer-string-no-properties)))
+              ;; (should (string= "a;;"
+              ;;                  (visible-buffer-string-no-properties)))
+              ;; not support
               )
             (it ()
               (insert string-of-buffer)
