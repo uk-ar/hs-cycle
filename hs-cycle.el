@@ -311,7 +311,10 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
   (unless hs-allow-nesting
     (hs-discard-overlays minp maxp))
   (goto-char minp)
-  (let ((re (concat "\\("
+  ;; add progress-reporter
+  (let ((spew (make-progress-reporter "Hiding blocks..."
+                                      minp maxp))
+        (re (concat "\\("
                     hs-block-start-regexp
                     "\\)"
                     (if hs-hide-comments-when-hiding-all
@@ -346,7 +349,10 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
             (if (> (count-lines (car c-reg) (nth 1 c-reg)) 1)
                 (hs-hide-block-at-point t c-reg)
               (goto-char (nth 1 c-reg)))))))
-      ))
+      ;; add progress-reporter
+      (progress-reporter-update spew (point))
+      )
+    (progress-reporter-done spew))
   (goto-char maxp)
   )
 
