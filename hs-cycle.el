@@ -640,6 +640,65 @@ Delete hideshow overlays in region defined by FROM and TO.
           (hs-hide-all)
           (should (string= ";;a\n\n\"(\"\n;(\n(if)\n\n ;a\n\n"
                            (visible-buffer-string-no-properties))))
+        (context "hs-cycle:hs-inside-comment-p"
+          (it ()
+            (insert "\
+;
+
+;")
+            (should (equal (hs-cycle:hs-inside-comment-p) '(4 5))))
+          (it ()
+            (insert "\
+;
+
+")
+            (beginning-of-buffer)
+            (should (equal (hs-cycle:hs-inside-comment-p) '(1 3))));; extend
+          (it ()
+            (insert "\
+a
+ ; b")
+            (should (equal (hs-cycle:hs-inside-comment-p) '(4 7))));; extend
+          (it ()
+            (insert "\
+
+ ; b")
+            (should (equal (hs-cycle:hs-inside-comment-p) '(3 6))));; extend
+          (it ()
+            (insert "\
+;;
+;;
+
+
+;;
+;;
+;;
+
+
+;;
+;;")
+            (goto-char 11)
+            (should (equal (hs-cycle:hs-inside-comment-p) '(9 19))));; extend
+          (it ()
+            (insert "\
+ ;
+
+
+ (")
+            (beginning-of-buffer)
+            (should (equal (hs-cycle:hs-inside-comment-p) '(2 5))));; extend
+          (it ()
+            (insert "\
+ ;a
+ ;b
+ (")
+            (beginning-of-buffer)
+            (should (equal (hs-cycle:hs-inside-comment-p) '(2 8))));; extend
+          (it ()
+            (insert "a;\n;")
+            (should (equal (hs-cycle:hs-inside-comment-p) '(2 5)))
+            );; extend
+          )
         (context "hs-inside-comment-p"
           (it ()
             (insert ";")
@@ -723,11 +782,6 @@ Delete hideshow overlays in region defined by FROM and TO.
             (should (equal (hs-inside-comment-p-org) '(4 5))));; bug?
           (it ()
             (insert "a;\n;")
-            ;; (should (equal (hs-inside-comment-p) '(2 5)))
-            ;; not support
-            );; fix
-          (it ()
-            (insert "a;\n;")
             (goto-char 2)
             (should (equal (hs-inside-comment-p-org) '(nil 3))));; bug
           (it ()
@@ -766,7 +820,7 @@ Delete hideshow overlays in region defined by FROM and TO.
 
 ")
             (beginning-of-buffer)
-            (should (equal (hs-cycle:hs-inside-comment-p) '(1 2))));; extend
+            (should (equal (hs-cycle:hs-inside-comment-p) '(1 3))));; extend
           (it ()
             (insert "\
 ;;
@@ -781,7 +835,7 @@ Delete hideshow overlays in region defined by FROM and TO.
 ;;
 ;;")
             (goto-char 11)
-            (should (equal (hs-cycle:hs-inside-comment-p) '(9 17))));; extend
+            (should (equal (hs-cycle:hs-inside-comment-p) '(9 19))));; extend
           )
         (context "hs-find-block-beginning"
           (when
@@ -910,6 +964,53 @@ Delete hideshow overlays in region defined by FROM and TO.
                              (visible-buffer-string-no-properties)))
             )
           )
+        (context ("hs-hide-level-recursive"
+                  :vars ((string-of-buffer "(
+;;a
+;;
+\(
+)
+\(
+))")))
+          (it ()
+            (insert string-of-buffer)
+            (beginning-of-buffer)
+            (hs-hide-level-recursive 1 nil nil)
+            (should (string= "(\n;;a\n()\n())"
+                             (visible-buffer-string-no-properties)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (beginning-of-buffer)
+            (hs-hide-level-recursive-org 1 nil nil)
+            (should (string= "(\n;;a\n;;\n()\n())"
+                             (visible-buffer-string-no-properties)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (beginning-of-buffer)
+            (hs-cycle)
+            (should (string= "()"
+                             (visible-buffer-string-no-properties)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (beginning-of-buffer)
+            (hs-cycle)
+            (hs-cycle)
+            (should (string= "(\n;;a\n()\n())"
+                             (visible-buffer-string-no-properties)))
+            )
+          (it ()
+            (insert string-of-buffer)
+            (beginning-of-buffer)
+            (hs-cycle)
+            (hs-cycle)
+            (hs-cycle)
+            (should (string= string-of-buffer
+                             (visible-buffer-string-no-properties)))
+            )
+          )
         (context "hs-cycle"
           (context ("1 comment"
                     :vars ((string-of-buffer "\
@@ -946,6 +1047,43 @@ a;;
             (it ()
               (insert string-of-buffer)
               (goto-char 2)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= string-of-buffer
+                               (visible-buffer-string-no-properties)))
+              ;; not support
+              )
+            )
+          (context ("multi comment with pre"
+                    :vars ((string-of-buffer "\
+\(;;a
+ ;;
+ b;;b
+ ;;
+
+ ;;c
+ ;;
+ )")))
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (should (string= "(;;a)"
+                               (visible-buffer-string-no-properties)))
+              ;; not support
+              )
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
+              (hs-cycle)
+              (should (string= "(;;a\n b;;b\n ;;c\n )"
+                               (visible-buffer-string-no-properties)))
+              )
+            (it ()
+              (insert string-of-buffer)
+              (beginning-of-buffer)
+              (hs-cycle)
               (hs-cycle)
               (hs-cycle)
               (should (string= string-of-buffer
