@@ -72,7 +72,9 @@
 (add-to-list
  'hs-special-modes-alist
  '(ruby-mode
-   "class\\|module\\|def\\|if\\|unless\\|case\\|while\\|until\\|for\\|begin\\|do" "end"
+   "\\<\\(class\\|module\\|def\\|case\\|while\\|until\\|for\\|begin\\|do\\)\\>"
+   "end"
+   ;; if\\|unless\\| if and unless can use with no end keyword
    "#"
    ruby-forward-sexp
    nil))
