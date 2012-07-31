@@ -470,6 +470,8 @@ Delete hideshow overlays in region defined by FROM and TO.
 (defun hs-cycle ()
   (interactive)
   (hs-life-goes-on
+   (letf (((symbol-function 'hs-inside-comment-p)
+           (symbol-function 'hs-cycle:hs-inside-comment-p)))
    (let* ((pos (point))
           (c-reg (hs-inside-comment-p))
           (bounds-of-comment (if (car c-reg) c-reg nil))
@@ -532,7 +534,7 @@ Delete hideshow overlays in region defined by FROM and TO.
                (message "3:SUBTREE")))
              )))
        )))
-  )
+  ))
 
 (defcustom hs-cycle:special-ctrl-a/e t
   ""
