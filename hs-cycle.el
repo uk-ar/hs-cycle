@@ -267,31 +267,38 @@ If `hs-hide-comments-when-hiding-all' is non-nil, also hide the comments."
 ;; copy from hs-inside-comment-p
 ;; return nil when not in comment
 (defun hs-cycle:hs-inside-comment-p ()
-  (let ((from
-         (save-excursion
-           ;; copy from delete-blank-lines
-           (if (re-search-backward "^[ \t]*$" nil t)
-               (progn (forward-line) (point))
-             (point-min))
-           ))
-        (to
-         (save-excursion
-           (if (re-search-forward "^[ \t]*$" nil t)
-               (progn
-                 (forward-line)
-                 (while (and (looking-at "^[ \t]*$")
-                             (not (eobp)))
-                   (forward-line))
-                 (forward-line -1)
-                 (line-end-position))
-             (point-max)))))
-        ;; (if (re-search-backward "[^ \t\n]" nil t)
-        ;;     (progn (forward-line 1) (point))
-        ;;   (point-min))
-        ;; (forward-sentence))))
-    (save-restriction
-      (narrow-to-region from to)
-      (hs-inside-comment-p))))
+  (save-excursion
+    ;; the idea is to look backwards for a comment start regexp, do a
+    ;; forward comment, and see if we are inside, then extend
+    ;; forward and backward as long as we have comments
+    (let ((q (point)))
+      (skip-chars-forward "[:blank:]")
+      ;;------------
+      ;; modify for "; ;" comment and at comment in string "";""
+      ;;------------
+      (let ((state (save-match-data (syntax-ppss))))
+        ;; first get to the beginning of this comment...
+        (when (or (and (nth 4 state) (goto-char (nth 8 state)))
+                  (and (looking-at hs-c-start-regexp);; in case of ;;
+                       (nth 4 (save-excursion (syntax-ppss (match-end 0))))))
+          ;; ...then extend backwards
+          (while (and (not (bobp))
+                      (not (save-excursion
+                             (forward-line -1)
+                             ;; copy from delete-blank-lines
+                             (looking-at "^[ \t]*$")))
+                      (forward-comment -1)))
+          (skip-chars-forward " \t\n\f")
+          (let ((p (point)))
+            (while (and (not (looking-at "^[ \t]*$"))
+                        (forward-comment 1)))
+            (skip-chars-forward " \t\n\f")
+            (when (looking-back "^[ \t]*")
+              (forward-line -1)
+              (end-of-line))
+            (when (>= (point) q)
+              (list p (point)))))))))
+
 ;; modify from emacs 24.1
 ;; Add support for comment
 (hs-cycle:save-original-func hs-hide-level-recursive)
