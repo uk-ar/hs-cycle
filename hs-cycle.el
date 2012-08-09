@@ -964,53 +964,6 @@ a
                              (visible-buffer-string-no-properties)))
             )
           )
-        (context ("hs-hide-level-recursive"
-                  :vars ((string-of-buffer "(
-;;a
-;;
-\(
-)
-\(
-))")))
-          (it ()
-            (insert string-of-buffer)
-            (beginning-of-buffer)
-            (hs-hide-level-recursive 1 nil nil)
-            (should (string= "(\n;;a\n()\n())"
-                             (visible-buffer-string-no-properties)))
-            )
-          (it ()
-            (insert string-of-buffer)
-            (beginning-of-buffer)
-            (hs-hide-level-recursive-org 1 nil nil)
-            (should (string= "(\n;;a\n;;\n()\n())"
-                             (visible-buffer-string-no-properties)))
-            )
-          (it ()
-            (insert string-of-buffer)
-            (beginning-of-buffer)
-            (hs-cycle)
-            (should (string= "()"
-                             (visible-buffer-string-no-properties)))
-            )
-          (it ()
-            (insert string-of-buffer)
-            (beginning-of-buffer)
-            (hs-cycle)
-            (hs-cycle)
-            (should (string= "(\n;;a\n()\n())"
-                             (visible-buffer-string-no-properties)))
-            )
-          (it ()
-            (insert string-of-buffer)
-            (beginning-of-buffer)
-            (hs-cycle)
-            (hs-cycle)
-            (hs-cycle)
-            (should (string= string-of-buffer
-                             (visible-buffer-string-no-properties)))
-            )
-          )
         (context "hs-cycle"
           (context ("1 comment"
                     :vars ((string-of-buffer "\
@@ -1052,42 +1005,6 @@ a;;
               (should (string= string-of-buffer
                                (visible-buffer-string-no-properties)))
               ;; not support
-              )
-            )
-          (context ("multi comment with pre"
-                    :vars ((string-of-buffer "\
-\(;;a
- ;;
- b;;b
- ;;
-
- ;;c
- ;;
- )")))
-            (it ()
-              (insert string-of-buffer)
-              (beginning-of-buffer)
-              (hs-cycle)
-              (should (string= "(;;a)"
-                               (visible-buffer-string-no-properties)))
-              ;; not support
-              )
-            (it ()
-              (insert string-of-buffer)
-              (beginning-of-buffer)
-              (hs-cycle)
-              (hs-cycle)
-              (should (string= "(;;a\n b;;b\n ;;c\n )"
-                               (visible-buffer-string-no-properties)))
-              )
-            (it ()
-              (insert string-of-buffer)
-              (beginning-of-buffer)
-              (hs-cycle)
-              (hs-cycle)
-              (hs-cycle)
-              (should (string= string-of-buffer
-                               (visible-buffer-string-no-properties)))
               )
             )
           (context ("with no-indent"
