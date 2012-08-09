@@ -1001,8 +1001,8 @@ a;;
               (insert string-of-buffer)
               (goto-char 2)
               (hs-cycle)
-              ;; (should (string= "a;;"
-              ;;                  (visible-buffer-string-no-properties)))
+              (should (string= "a;;"
+                               (visible-buffer-string-no-properties)))
               ;; not support
               )
             (it ()
