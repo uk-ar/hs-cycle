@@ -54,7 +54,8 @@
        ((and (< n 0) (looking-at "^=end\\>"))
         (re-search-backward "^=begin\\>"))
        (t
-        (setq pos (ruby-calculate-indent));; (current-indentation)
+        (setq pos (current-indentation))
+        ;; (ruby-calculate-indent));to slow...
         (cond
          ((< start pos)
           (setq down t))
@@ -71,8 +72,8 @@
 
 (add-to-list
  'hs-special-modes-alist
- '(ruby-mode
-   "\\<\\(class\\|module\\|def\\|case\\|while\\|until\\|for\\|begin\\|do\\)\\>"
+ `(ruby-mode
+   ,(concat "\\_<\\(" ruby-block-beg-re "\\)\\_>")
    "end"
    ;; if\\|unless\\| if and unless can use with no end keyword
    "#"
@@ -201,7 +202,12 @@ and then further adjusted to be at the end of the line."
         (hs-forward-sexp mdata 1)
         (setq q (if (looking-back hs-block-end-regexp)
                     (match-beginning 0)
-                  (point)))
+                  ;;------------
+                  ;; modify ruby "unless" with no "end"
+                  ;;------------
+                  ;; (point)
+                  p
+                  ))
         ;;------------
         ;; modify for (\n)
         ;;------------
@@ -1349,6 +1355,28 @@ end"
             (hs-hide-all)
             (should (string= "class Fooend"
                              (visible-buffer-string)))
+            )
+          )
+        (context ("unless" :vars ((string-of-buffer )))
+          (it ()
+            (insert "\
+1 unless nil
+1")
+            (goto-char 3)
+            (hs-cycle)
+            (should (string= "\
+1 unless nil
+1"
+                             (visible-buffer-string-no-properties)))
+            )
+          (it ()
+            (insert "\
+1 unless nil
+end")
+            (goto-char 3)
+            (hs-cycle)
+            (should (string= "1 unless nilend"
+                             (visible-buffer-string-no-properties)))
             )
           )
         (context ("hs-hide-block-at-point" :vars ((string-of-buffer "\
