@@ -473,6 +473,8 @@ Delete hideshow overlays in region defined by FROM and TO.
       (hs-cycle:count-overlay from to)
       )))
 
+(require 'cl)
+
 (defun hs-cycle ()
   (interactive)
   (hs-life-goes-on
